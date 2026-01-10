@@ -9,6 +9,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"] || "file:./dev.db",
+    url: process.env["DATABASE_URL"] || "mysql://ghost:GhostServer2024@46.224.197.229:3306/ghost_gaming",
   },
 });
