@@ -10,6 +10,8 @@ public class PlayerData
     public int TotalEarned { get; set; }
     public List<EquippedSkin> EquippedSkins { get; set; } = new();
     public bool IsDirty { get; set; } = false;
+    public string Role { get; set; } = "default"; // owner, admin, mod, gold, silver, bronze, default
+    public string PremiumTier { get; set; } = "none"; // none, bronze, silver, gold
 }
 
 /// <summary>
@@ -38,6 +40,7 @@ public class ApiPlayerResponse
     public int Souls { get; set; }
     public int TotalSoulsEarned { get; set; }
     public int PlaytimeMinutes { get; set; }
+    public string PremiumTier { get; set; } = "none";
     public List<EquippedSkin>? EquippedSkins { get; set; }
 }
 

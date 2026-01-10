@@ -13,9 +13,9 @@ namespace GhostSouls;
 public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 {
     public override string ModuleName => "Ghost Souls";
-    public override string ModuleVersion => "1.0.0";
-    public override string ModuleAuthor => "Ghost Gaming";
-    public override string ModuleDescription => "Souls economy, skins & sponsor system for Ghost Gaming servers";
+    public override string ModuleVersion => "2.0.0";
+    public override string ModuleAuthor => "GhostServers.site";
+    public override string ModuleDescription => "Souls economy, roles, skins & premium system for Ghost Servers";
 
     public required GhostConfig Config { get; set; }
 
@@ -29,7 +29,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
     public override void Load(bool hotReload)
     {
-        Logger.LogInformation("[GhostSouls] Loading Ghost Souls plugin...");
+        Logger.LogInformation("[GhostSouls] Loading Ghost Souls plugin v2.0...");
 
         // Register event handlers
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnect);
@@ -37,6 +37,10 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
+
+        // Chat listener for role tags
+        AddCommandListener("say", OnPlayerChat);
+        AddCommandListener("say_team", OnPlayerChatTeam);
 
         // Start ad rotation timer
         if (Config.Sponsors.Enabled && Config.Sponsors.Ads.Count > 0)
@@ -80,10 +84,15 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
                     {
                         if (player.IsValid)
                         {
+                            var role = GetPlayerRole(steamId);
+                            var settings = GetRoleSettings(role);
+                            var tagColor = GetChatColor(settings.TagColor);
+                            var roleDisplay = !string.IsNullOrEmpty(settings.Tag) ? $" {tagColor}{settings.Tag}" : "";
+
                             player.PrintToChat($" ");
-                            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Welcome back, {ChatColors.Green}{player.PlayerName}{ChatColors.Default}!");
-                            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Souls: {ChatColors.Green}{data.Souls:N0} {ChatColors.Default}| Type {ChatColors.Yellow}!help {ChatColors.Default}for commands");
-                            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Gold}Open cases & win skins: {ChatColors.Green}{Config.WebsiteUrl}/cases");
+                            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Welcome back,{roleDisplay} {ChatColors.Green}{player.PlayerName}{ChatColors.Default}!");
+                            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Souls: {ChatColors.Green}{data.Souls:N0} {ChatColors.Default}| Multiplier: {ChatColors.Gold}{settings.SoulsMultiplier:0.#}x");
+                            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Type {ChatColors.Yellow}!help {ChatColors.Default}for commands");
                             player.PrintToChat($" ");
                         }
                     });
@@ -185,22 +194,27 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         _lastKillTime[steamId] = DateTime.Now;
 
         // Calculate souls reward
-        int soulsEarned = Config.Souls.KillReward;
+        int baseSouls = Config.Souls.KillReward;
         string bonusText = "";
 
         // Headshot bonus
         if (@event.Headshot)
         {
-            soulsEarned += Config.Souls.HeadshotBonus;
+            baseSouls += Config.Souls.HeadshotBonus;
             bonusText = " (Headshot!)";
         }
 
         // Knife kill bonus
         if (@event.Weapon == "knife" || @event.Weapon.Contains("bayonet"))
         {
-            soulsEarned += Config.Souls.KnifeKillBonus;
+            baseSouls += Config.Souls.KnifeKillBonus;
             bonusText = " (Knife kill!)";
         }
+
+        // Apply role multiplier
+        float multiplier = GetSoulsMultiplier(steamId);
+        int soulsEarned = (int)Math.Ceiling(baseSouls * multiplier);
+        string multiplierText = multiplier > 1.0f ? $" {ChatColors.Gold}({multiplier:0.#}x)" : "";
 
         // Award souls
         if (_playerCache.TryGetValue(steamId, out var data))
@@ -209,7 +223,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
             data.TotalEarned += soulsEarned;
             data.IsDirty = true;
 
-            attacker.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Green}+{soulsEarned} {ChatColors.Default}souls{bonusText}");
+            attacker.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Green}+{soulsEarned} {ChatColors.Default}souls{bonusText}{multiplierText}");
         }
 
         return HookResult.Continue;
@@ -219,6 +233,133 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
     {
         // Could show sponsor message at round start
         return HookResult.Continue;
+    }
+
+    #endregion
+
+    #region Chat System with Roles
+
+    private HookResult OnPlayerChat(CCSPlayerController? player, CommandInfo info)
+    {
+        if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+
+        var message = info.GetArg(1);
+        if (string.IsNullOrEmpty(message)) return HookResult.Continue;
+
+        // Don't process commands
+        if (message.StartsWith("!") || message.StartsWith("/")) return HookResult.Continue;
+
+        // Get role and format message
+        var role = GetPlayerRole(player.SteamID);
+        var settings = GetRoleSettings(role);
+
+        var formattedMessage = FormatChatMessage(player, message, settings, false);
+
+        // Broadcast to all players
+        foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot))
+        {
+            p.PrintToChat(formattedMessage);
+        }
+
+        return HookResult.Handled; // Block original message
+    }
+
+    private HookResult OnPlayerChatTeam(CCSPlayerController? player, CommandInfo info)
+    {
+        if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+
+        var message = info.GetArg(1);
+        if (string.IsNullOrEmpty(message)) return HookResult.Continue;
+
+        // Don't process commands
+        if (message.StartsWith("!") || message.StartsWith("/")) return HookResult.Continue;
+
+        // Get role and format message
+        var role = GetPlayerRole(player.SteamID);
+        var settings = GetRoleSettings(role);
+
+        var formattedMessage = FormatChatMessage(player, message, settings, true);
+
+        // Send to team only
+        foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && p.Team == player.Team))
+        {
+            p.PrintToChat(formattedMessage);
+        }
+
+        return HookResult.Handled; // Block original message
+    }
+
+    private string GetPlayerRole(ulong steamId)
+    {
+        var steamIdStr = steamId.ToString();
+
+        // Check staff roles first (from config)
+        if (Config.Roles.Owners.Contains(steamIdStr)) return "owner";
+        if (Config.Roles.Admins.Contains(steamIdStr)) return "admin";
+        if (Config.Roles.Mods.Contains(steamIdStr)) return "mod";
+
+        // Check premium tier from player cache
+        if (_playerCache.TryGetValue(steamId, out var data))
+        {
+            return data.PremiumTier switch
+            {
+                "gold" => "gold",
+                "silver" => "silver",
+                "bronze" => "bronze",
+                _ => "default"
+            };
+        }
+
+        return "default";
+    }
+
+    private RoleSettings GetRoleSettings(string role)
+    {
+        if (Config.Roles.RoleSettings.TryGetValue(role, out var settings))
+        {
+            return settings;
+        }
+        return Config.Roles.RoleSettings["default"];
+    }
+
+    private string FormatChatMessage(CCSPlayerController player, string message, RoleSettings settings, bool isTeam)
+    {
+        var tagColor = GetChatColor(settings.TagColor);
+        var chatColor = GetChatColor(settings.ChatColor);
+        var teamPrefix = isTeam ? "(TEAM) " : "";
+        var deadPrefix = !player.PawnIsAlive ? "*DEAD* " : "";
+        var tag = !string.IsNullOrEmpty(settings.Tag) ? $"{tagColor}{settings.Tag} " : "";
+
+        return $" {deadPrefix}{teamPrefix}{tag}{ChatColors.Green}{player.PlayerName}{ChatColors.Default}: {chatColor}{message}";
+    }
+
+    private char GetChatColor(string colorName)
+    {
+        return colorName.ToLower() switch
+        {
+            "red" => ChatColors.Red,
+            "darkred" => ChatColors.DarkRed,
+            "orange" => ChatColors.Orange,
+            "yellow" => ChatColors.Yellow,
+            "gold" => ChatColors.Gold,
+            "green" => ChatColors.Green,
+            "lightgreen" => ChatColors.Lime,
+            "lime" => ChatColors.Lime,
+            "blue" => ChatColors.Blue,
+            "lightblue" => ChatColors.BlueGrey,
+            "purple" => ChatColors.Purple,
+            "magenta" => ChatColors.Magenta,
+            "grey" => ChatColors.Grey,
+            "white" => ChatColors.White,
+            _ => ChatColors.Default
+        };
+    }
+
+    private float GetSoulsMultiplier(ulong steamId)
+    {
+        var role = GetPlayerRole(steamId);
+        var settings = GetRoleSettings(role);
+        return settings.SoulsMultiplier;
     }
 
     #endregion
@@ -457,6 +598,43 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         });
     }
 
+    [ConsoleCommand("css_discord", "Show Discord invite link")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnDiscordCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+
+        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Join our Discord: {ChatColors.Blue}discord.gg/ghostservers");
+    }
+
+    [ConsoleCommand("css_website", "Show website link")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnWebsiteCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+
+        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Visit us at: {ChatColors.Green}{Config.WebsiteUrl}");
+    }
+
+    [ConsoleCommand("css_rank", "Show your current rank and role")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnRankCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+
+        var role = GetPlayerRole(player.SteamID);
+        var settings = GetRoleSettings(role);
+        var tagColor = GetChatColor(settings.TagColor);
+
+        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Your rank: {tagColor}{settings.Tag}");
+        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Souls multiplier: {ChatColors.Gold}{settings.SoulsMultiplier:0.#}x");
+
+        if (role == "default")
+        {
+            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Yellow}Get premium at {Config.WebsiteUrl}/premium for bonus souls!");
+        }
+    }
+
     [ConsoleCommand("css_ghost", "Show Ghost Gaming info")]
     [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void OnGhostCommand(CCSPlayerController? player, CommandInfo command)
@@ -547,20 +725,21 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
     private void ShowHelpMenu(CCSPlayerController player)
     {
+        var role = GetPlayerRole(player.SteamID);
+        var settings = GetRoleSettings(role);
+
         player.PrintToChat($" ");
-        player.PrintToChat($" {ChatColors.Purple}======== Ghost Gaming ========");
+        player.PrintToChat($" {ChatColors.Purple}======== GhostServers.site ========");
         player.PrintToChat($" {ChatColors.Default}Website: {ChatColors.Green}{Config.WebsiteUrl}");
         player.PrintToChat($" ");
-        player.PrintToChat($" {ChatColors.Yellow}!souls {ChatColors.Default}- Check your souls balance");
-        player.PrintToChat($" {ChatColors.Yellow}!inventory {ChatColors.Default}- View your skins");
-        player.PrintToChat($" {ChatColors.Yellow}!cases {ChatColors.Default}- Open cases");
-        player.PrintToChat($" {ChatColors.Yellow}!top {ChatColors.Default}- View leaderboard");
-        player.PrintToChat($" {ChatColors.Yellow}!refresh {ChatColors.Default}- Sync your inventory");
-        player.PrintToChat($" {ChatColors.Yellow}!server {ChatColors.Default}- Browse & join servers");
+        player.PrintToChat($" {ChatColors.Yellow}!souls {ChatColors.Default}- Check balance | {ChatColors.Yellow}!rank {ChatColors.Default}- Your rank");
+        player.PrintToChat($" {ChatColors.Yellow}!inventory {ChatColors.Default}- View skins | {ChatColors.Yellow}!cases {ChatColors.Default}- Open cases");
+        player.PrintToChat($" {ChatColors.Yellow}!top {ChatColors.Default}- Leaderboard | {ChatColors.Yellow}!refresh {ChatColors.Default}- Sync data");
+        player.PrintToChat($" {ChatColors.Yellow}!server {ChatColors.Default}- Server list | {ChatColors.Yellow}!discord {ChatColors.Default}- Discord");
         player.PrintToChat($" ");
-        player.PrintToChat($" {ChatColors.Gold}Earn souls by getting kills!");
-        player.PrintToChat($" {ChatColors.Gold}Open cases at {ChatColors.Green}{Config.WebsiteUrl}/cases");
-        player.PrintToChat($" {ChatColors.Purple}==============================");
+        player.PrintToChat($" {ChatColors.Default}Your multiplier: {ChatColors.Gold}{settings.SoulsMultiplier:0.#}x souls");
+        player.PrintToChat($" {ChatColors.Gold}Get premium for up to 3x souls!");
+        player.PrintToChat($" {ChatColors.Purple}===================================");
     }
 
     #endregion
@@ -593,6 +772,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
                 SteamId = steamId,
                 Souls = apiResponse.Souls,
                 TotalEarned = apiResponse.TotalSoulsEarned,
+                PremiumTier = apiResponse.PremiumTier ?? "none",
                 EquippedSkins = apiResponse.EquippedSkins ?? new List<EquippedSkin>()
             };
         }

@@ -25,6 +25,9 @@ public class GhostConfig : BasePluginConfig
 
     [JsonPropertyName("Servers")]
     public ServersConfig Servers { get; set; } = new();
+
+    [JsonPropertyName("Roles")]
+    public RolesConfig Roles { get; set; } = new();
 }
 
 public class SoulsConfig
@@ -110,4 +113,43 @@ public class ServerInfo
 
     [JsonPropertyName("Description")]
     public string Description { get; set; } = "";
+}
+
+public class RolesConfig
+{
+    [JsonPropertyName("Owners")]
+    public List<string> Owners { get; set; } = new() { "76561198012345678" }; // SteamID64s
+
+    [JsonPropertyName("Admins")]
+    public List<string> Admins { get; set; } = new();
+
+    [JsonPropertyName("Mods")]
+    public List<string> Mods { get; set; } = new();
+
+    [JsonPropertyName("RoleSettings")]
+    public Dictionary<string, RoleSettings> RoleSettings { get; set; } = new()
+    {
+        { "owner", new RoleSettings { Tag = "[OWNER]", ChatColor = "Red", TagColor = "DarkRed", SoulsMultiplier = 5.0f } },
+        { "admin", new RoleSettings { Tag = "[ADMIN]", ChatColor = "Orange", TagColor = "Orange", SoulsMultiplier = 3.0f } },
+        { "mod", new RoleSettings { Tag = "[MOD]", ChatColor = "LightGreen", TagColor = "Green", SoulsMultiplier = 2.0f } },
+        { "gold", new RoleSettings { Tag = "[GOLD]", ChatColor = "Gold", TagColor = "Gold", SoulsMultiplier = 3.0f } },
+        { "silver", new RoleSettings { Tag = "[SILVER]", ChatColor = "LightBlue", TagColor = "Grey", SoulsMultiplier = 2.0f } },
+        { "bronze", new RoleSettings { Tag = "[BRONZE]", ChatColor = "Orange", TagColor = "Orange", SoulsMultiplier = 1.5f } },
+        { "default", new RoleSettings { Tag = "", ChatColor = "Default", TagColor = "Default", SoulsMultiplier = 1.0f } }
+    };
+}
+
+public class RoleSettings
+{
+    [JsonPropertyName("Tag")]
+    public string Tag { get; set; } = "";
+
+    [JsonPropertyName("ChatColor")]
+    public string ChatColor { get; set; } = "Default";
+
+    [JsonPropertyName("TagColor")]
+    public string TagColor { get; set; } = "Default";
+
+    [JsonPropertyName("SoulsMultiplier")]
+    public float SoulsMultiplier { get; set; } = 1.0f;
 }
