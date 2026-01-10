@@ -38,6 +38,8 @@ interface UseInventoryReturn {
   refresh: () => Promise<void>
   toggleFavorite: (itemId: string) => Promise<void>
   deleteItem: (itemId: string) => Promise<boolean>
+  equipItem: (itemId: string, team: 'ct' | 't' | 'both') => Promise<void>
+  unequipItem: (itemId: string) => Promise<void>
 }
 
 export function useInventory(): UseInventoryReturn {
@@ -116,6 +118,65 @@ export function useInventory(): UseInventoryReturn {
     }
   }, [])
 
+  const equipItem = useCallback(async (itemId: string, team: 'ct' | 't' | 'both') => {
+    try {
+      const response = await fetch(`/api/inventory/${itemId}/equip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Kunde inte equippa item')
+      }
+
+      const data = await response.json()
+
+      // Update local state - unequip same weapon from other items, then equip this one
+      setItems(prev => prev.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            equippedCt: team === 'ct' || team === 'both',
+            equippedT: team === 't' || team === 'both',
+          }
+        }
+        // Unequip same weapon from other items
+        if (item.weapon === data.weapon && item.id !== itemId) {
+          return {
+            ...item,
+            equippedCt: team === 'ct' || team === 'both' ? false : item.equippedCt,
+            equippedT: team === 't' || team === 'both' ? false : item.equippedT,
+          }
+        }
+        return item
+      }))
+    } catch (err) {
+      console.error('Failed to equip item:', err)
+    }
+  }, [])
+
+  const unequipItem = useCallback(async (itemId: string) => {
+    try {
+      const response = await fetch(`/api/inventory/${itemId}/equip`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Kunde inte unequippa item')
+      }
+
+      // Update local state
+      setItems(prev => prev.map(item =>
+        item.id === itemId
+          ? { ...item, equippedCt: false, equippedT: false }
+          : item
+      ))
+    } catch (err) {
+      console.error('Failed to unequip item:', err)
+    }
+  }, [])
+
   useEffect(() => {
     fetchInventory()
   }, [fetchInventory])
@@ -128,5 +189,7 @@ export function useInventory(): UseInventoryReturn {
     refresh: fetchInventory,
     toggleFavorite,
     deleteItem,
+    equipItem,
+    unequipItem,
   }
 }

@@ -20,6 +20,8 @@ interface InventoryGridProps {
   emptyMessage?: string
   onFavoriteToggle?: (itemId: string) => void
   onDeleteItem?: (itemId: string) => Promise<boolean>
+  onEquipItem?: (itemId: string, team: 'ct' | 't' | 'both') => Promise<void>
+  onUnequipItem?: (itemId: string) => Promise<void>
   showFavorites?: boolean
 }
 
@@ -57,6 +59,8 @@ export function InventoryGrid({
   emptyMessage = 'No items in inventory',
   onFavoriteToggle,
   onDeleteItem,
+  onEquipItem,
+  onUnequipItem,
   showFavorites = true,
 }: InventoryGridProps) {
   const [selectedItem, setSelectedItem] = useState<ExtendedInventoryItem | null>(null)
@@ -379,6 +383,8 @@ export function InventoryGrid({
         isOpen={!!selectedItem && bulkMode === 'none'}
         onClose={() => setSelectedItem(null)}
         onDelete={onDeleteItem}
+        onEquip={onEquipItem}
+        onUnequip={onUnequipItem}
       />
     </div>
   )

@@ -12,6 +12,8 @@ const navLinks = [
   { href: '/cases', label: 'Cases' },
   { href: '/inventory', label: 'Inventory' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/giveaways', label: 'Giveaways' },
+  { href: '/news', label: 'News' },
   { href: '/premium', label: 'Premium', highlight: true },
 ]
 

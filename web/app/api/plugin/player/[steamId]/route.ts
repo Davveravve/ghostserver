@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getPaintKit, getWeaponDefIndex } from '@/lib/paint-kits'
 
 function verifyApiKey(request: NextRequest): boolean {
   const apiKey = request.headers.get('X-API-Key')
@@ -43,7 +44,8 @@ export async function GET(
 
     const equippedSkins = player.inventory.map(item => ({
       weaponName: item.weapon,
-      paintKit: 0,
+      weaponDefIndex: getWeaponDefIndex(item.weapon),
+      paintKit: getPaintKit(item.skinName),
       seed: Math.floor(Math.random() * 1000),
       wear: item.floatValue || 0.1,
       dopplerPhase: item.dopplerPhase,

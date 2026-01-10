@@ -78,7 +78,7 @@ const wearSortOrder: Record<Wear, number> = {
 export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState<'favorites' | 'all' | 'equipped'>('favorites')
   const [sortBy, setSortBy] = useState<SortOption>('price')
-  const { items, stats, isLoading, error, toggleFavorite, deleteItem } = useInventory()
+  const { items, stats, isLoading, error, toggleFavorite, deleteItem, equipItem, unequipItem } = useInventory()
 
   // Konvertera items till InventoryItem format
   const inventoryItems = useMemo(() => {
@@ -293,6 +293,8 @@ export default function InventoryPage() {
         }
         onFavoriteToggle={toggleFavorite}
         onDeleteItem={deleteItem}
+        onEquipItem={equipItem}
+        onUnequipItem={unequipItem}
       />
     </div>
   )

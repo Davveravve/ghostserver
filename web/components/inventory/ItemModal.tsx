@@ -11,6 +11,8 @@ interface ItemModalProps {
   isOpen: boolean
   onClose: () => void
   onDelete?: (itemId: string) => Promise<boolean>
+  onEquip?: (itemId: string, team: 'ct' | 't' | 'both') => Promise<void>
+  onUnequip?: (itemId: string) => Promise<void>
 }
 
 const wearColors: Record<Wear, { text: string; bg: string; border: string }> = {
@@ -36,9 +38,10 @@ const BOTH_SIDES_WEAPONS = [
   'MP9', 'MAC-10', 'PP-Bizon', 'MP7', 'UMP-45', 'P90', 'MP5-SD'
 ]
 
-export function ItemModal({ inventoryItem, isOpen, onClose, onDelete }: ItemModalProps) {
+export function ItemModal({ inventoryItem, isOpen, onClose, onDelete, onEquip, onUnequip }: ItemModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isEquipping, setIsEquipping] = useState(false)
 
   if (!inventoryItem) return null
 
@@ -57,6 +60,24 @@ export function ItemModal({ inventoryItem, isOpen, onClose, onDelete }: ItemModa
       setShowDeleteConfirm(false)
       onClose()
     }
+  }
+
+  const handleEquip = async (team: 'ct' | 't' | 'both') => {
+    if (!onEquip || !('rawId' in inventoryItem)) return
+
+    setIsEquipping(true)
+    await onEquip((inventoryItem as any).rawId, team)
+    setIsEquipping(false)
+    onClose()
+  }
+
+  const handleUnequip = async () => {
+    if (!onUnequip || !('rawId' in inventoryItem)) return
+
+    setIsEquipping(true)
+    await onUnequip((inventoryItem as any).rawId)
+    setIsEquipping(false)
+    onClose()
   }
 
   const handleClose = () => {
@@ -179,23 +200,53 @@ export function ItemModal({ inventoryItem, isOpen, onClose, onDelete }: ItemModa
                   ) : (
                     <>
                       {inventoryItem.is_equipped ? (
-                        <Button variant="secondary" className="w-full">
-                          Unequip
+                        <Button
+                          variant="secondary"
+                          className="w-full"
+                          onClick={handleUnequip}
+                          disabled={isEquipping}
+                        >
+                          {isEquipping ? 'Unequipping...' : 'Unequip'}
                         </Button>
                       ) : (
                         <>
-                          {(isKnifeOrGloves || BOTH_SIDES_WEAPONS.includes(item.weapon)) ? (
-                            <div className="grid grid-cols-2 gap-2">
-                              <Button variant="secondary" className="flex items-center justify-center gap-2 border-blue-500/50 hover:bg-blue-500/20">
-                                <span className="text-blue-400 font-bold">CT</span> Equip
-                              </Button>
-                              <Button variant="secondary" className="flex items-center justify-center gap-2 border-yellow-500/50 hover:bg-yellow-500/20">
-                                <span className="text-yellow-400 font-bold">T</span> Equip
+                          {(isKnifeOrGloves || BOTH_SIDES_WEAPONS.includes(item.weapon || '')) ? (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                  variant="secondary"
+                                  className="flex items-center justify-center gap-2 border-blue-500/50 hover:bg-blue-500/20"
+                                  onClick={() => handleEquip('ct')}
+                                  disabled={isEquipping}
+                                >
+                                  <span className="text-blue-400 font-bold">CT</span> Equip
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  className="flex items-center justify-center gap-2 border-yellow-500/50 hover:bg-yellow-500/20"
+                                  onClick={() => handleEquip('t')}
+                                  disabled={isEquipping}
+                                >
+                                  <span className="text-yellow-400 font-bold">T</span> Equip
+                                </Button>
+                              </div>
+                              <Button
+                                variant="primary"
+                                className="w-full"
+                                onClick={() => handleEquip('both')}
+                                disabled={isEquipping}
+                              >
+                                {isEquipping ? 'Equipping...' : 'Equip Both Sides'}
                               </Button>
                             </div>
                           ) : (
-                            <Button variant="primary" className="w-full">
-                              Equip
+                            <Button
+                              variant="primary"
+                              className="w-full"
+                              onClick={() => handleEquip('both')}
+                              disabled={isEquipping}
+                            >
+                              {isEquipping ? 'Equipping...' : 'Equip'}
                             </Button>
                           )}
                         </>

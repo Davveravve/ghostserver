@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { steamId, souls, soulsEarned, playtimeMinutes } = await request.json()
+    const { steamId, soulsToAdd, playtimeMinutes } = await request.json()
 
     if (!steamId) {
       return NextResponse.json({ error: 'Missing steamId' }, { status: 400 })
@@ -28,12 +28,10 @@ export async function POST(request: NextRequest) {
 
     const updateData: any = {}
 
-    if (typeof souls === 'number') {
-      updateData.souls = souls
-    }
-
-    if (typeof soulsEarned === 'number') {
-      updateData.totalSoulsEarned = soulsEarned
+    // Add souls (delta) instead of overwriting
+    if (typeof soulsToAdd === 'number' && soulsToAdd > 0) {
+      updateData.souls = { increment: soulsToAdd }
+      updateData.totalSoulsEarned = { increment: soulsToAdd }
     }
 
     if (typeof playtimeMinutes === 'number') {
@@ -45,7 +43,7 @@ export async function POST(request: NextRequest) {
       data: updateData
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Player synced',
       souls: updatedPlayer.souls,
       totalSoulsEarned: updatedPlayer.totalSoulsEarned

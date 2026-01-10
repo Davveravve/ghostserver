@@ -148,3 +148,97 @@ model Server {
   lastHeartbeat DateTime?
   createdAt     DateTime @default(now())
 }
+
+// Giveaway system
+model Giveaway {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?  @db.Text
+
+  // Prize
+  prizeType     String   // souls, item, custom
+  prizeSouls    Int?     // If prizeType = souls
+  prizeItemId   Int?     // If prizeType = item (references items-data.ts)
+  prizeCustom   String?  // If prizeType = custom (description of prize)
+
+  // Type: random = random winner, leaderboard = top X players win
+  giveawayType  String   @default("random") // random, leaderboard
+
+  // For leaderboard type
+  leaderboardType String? // elo, souls, kills
+  winnersCount   Int     @default(1) // How many winners
+
+  // Requirements to join
+  minSouls      Int      @default(0)
+  minElo        Int      @default(0)
+  requirePremium Boolean @default(false)
+
+  // Timing
+  startsAt      DateTime @default(now())
+  endsAt        DateTime
+
+  // Status
+  status        String   @default("active") // active, ended, cancelled
+
+  createdAt     DateTime @default(now())
+
+  // Relations
+  entries       GiveawayEntry[]
+  winners       GiveawayWinner[]
+}
+
+model GiveawayEntry {
+  id          String   @id @default(cuid())
+
+  giveawayId  String
+  giveaway    Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+
+  steamId     String
+  username    String
+
+  createdAt   DateTime @default(now())
+
+  @@unique([giveawayId, steamId])
+  @@index([giveawayId])
+}
+
+model GiveawayWinner {
+  id          String   @id @default(cuid())
+
+  giveawayId  String
+  giveaway    Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+
+  steamId     String
+  username    String
+
+  // For leaderboard type, store placement
+  placement   Int      @default(1)
+
+  // Was prize claimed?
+  claimed     Boolean  @default(false)
+  claimedAt   DateTime?
+
+  createdAt   DateTime @default(now())
+
+  @@index([giveawayId])
+}
+
+// News and announcements
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  excerpt     String?  @db.Text
+
+  // Category: update, event, maintenance, announcement
+  category    String   @default("announcement")
+
+  // Is pinned to top
+  isPinned    Boolean  @default(false)
+
+  // Is published or draft
+  isPublished Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
