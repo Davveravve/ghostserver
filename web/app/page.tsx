@@ -20,28 +20,39 @@ const servers = [
 ]
 
 async function getStats() {
-  const [playerCount, casesOpened, soulsData, recentDrops] = await Promise.all([
-    prisma.player.count(),
-    prisma.caseOpen.count(),
-    prisma.player.aggregate({ _sum: { totalSoulsEarned: true } }),
-    prisma.caseOpen.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 4,
-      include: { player: { select: { username: true } } },
-    }),
-  ])
+  try {
+    const [playerCount, casesOpened, soulsData, recentDrops] = await Promise.all([
+      prisma.player.count(),
+      prisma.caseOpen.count(),
+      prisma.player.aggregate({ _sum: { totalSoulsEarned: true } }),
+      prisma.caseOpen.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 4,
+        include: { player: { select: { username: true } } },
+      }),
+    ])
 
-  return {
-    totalPlayers: playerCount,
-    onlinePlayers: 0,
-    casesOpened,
-    soulsEarned: soulsData._sum.totalSoulsEarned || 0,
-    recentDrops: recentDrops.map((drop) => ({
-      player: drop.player.username,
-      item: drop.itemWeapon + ' | ' + drop.itemName,
-      wear: drop.itemWear,
-      isSpecial: drop.itemWeapon.includes('Knife') || drop.itemWeapon.includes('Karambit'),
-    })),
+    return {
+      totalPlayers: playerCount,
+      onlinePlayers: 0,
+      casesOpened,
+      soulsEarned: soulsData._sum.totalSoulsEarned || 0,
+      recentDrops: recentDrops.map((drop) => ({
+        player: drop.player.username,
+        item: drop.itemWeapon + ' | ' + drop.itemName,
+        wear: drop.itemWear,
+        isSpecial: drop.itemWeapon.includes('Knife') || drop.itemWeapon.includes('Karambit'),
+      })),
+    }
+  } catch (error) {
+    console.error('Database error:', error)
+    return {
+      totalPlayers: 0,
+      onlinePlayers: 0,
+      casesOpened: 0,
+      soulsEarned: 0,
+      recentDrops: [],
+    }
   }
 }
 

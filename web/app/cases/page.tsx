@@ -7,30 +7,35 @@ import { isAnnouncementItem } from '@/lib/item-utils'
 export const dynamic = 'force-dynamic'
 
 async function getRecentDrops() {
-  const drops = await prisma.caseOpen.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 20,
-    include: {
-      player: {
-        select: { username: true, avatarUrl: true },
+  try {
+    const drops = await prisma.caseOpen.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      include: {
+        player: {
+          select: { username: true, avatarUrl: true },
+        },
       },
-    },
-  })
+    })
 
-  return drops.map((drop) => {
-    const item = getItemById(drop.itemId)
-    return {
-      id: drop.id,
-      player: drop.player.username,
-      avatarUrl: drop.player.avatarUrl,
-      weapon: drop.itemWeapon,
-      skinName: drop.itemName,
-      wear: drop.itemWear,
-      imageUrl: item?.image_url || null,
-      isRare: isAnnouncementItem(drop.itemWeapon, drop.itemName, null),
-      createdAt: drop.createdAt.toISOString(),
-    }
-  })
+    return drops.map((drop) => {
+      const item = getItemById(drop.itemId)
+      return {
+        id: drop.id,
+        player: drop.player.username,
+        avatarUrl: drop.player.avatarUrl,
+        weapon: drop.itemWeapon,
+        skinName: drop.itemName,
+        wear: drop.itemWear,
+        imageUrl: item?.image_url || null,
+        isRare: isAnnouncementItem(drop.itemWeapon, drop.itemName, null),
+        createdAt: drop.createdAt.toISOString(),
+      }
+    })
+  } catch (error) {
+    console.error('Database error:', error)
+    return []
+  }
 }
 
 export default async function CasesPage() {
