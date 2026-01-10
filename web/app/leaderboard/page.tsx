@@ -14,6 +14,9 @@ interface LeaderboardPlayer {
   casesOpened?: number
   rareCount?: number
   bestDrop?: string | null
+  elo?: number
+  wins?: number
+  losses?: number
 }
 
 interface CurrentUserStats {
@@ -29,6 +32,7 @@ interface CurrentUserStats {
 
 interface LeaderboardData {
   topSouls: LeaderboardPlayer[]
+  topElo: LeaderboardPlayer[]
   topCasesOpened: LeaderboardPlayer[]
   topRareItems: LeaderboardPlayer[]
   currentUser: CurrentUserStats | null
@@ -58,6 +62,7 @@ export default function LeaderboardPage() {
   }, [])
 
   const topSouls = data?.topSouls || []
+  const topElo = data?.topElo || []
   const topCasesOpened = data?.topCasesOpened || []
   const topRareItems = data?.topRareItems || []
   const currentUser = data?.currentUser
@@ -145,6 +150,78 @@ export default function LeaderboardPage() {
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     No players yet. Be the first!
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ELO Leaderboard */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardContent>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-heading text-xl font-bold flex items-center gap-2">
+                    <TrophyIcon className="w-6 h-6 text-yellow-400" />
+                    Top ELO Rankings
+                  </h2>
+                  <span className="text-sm text-gray-400">Competitive ranking</span>
+                </div>
+
+                {topElo.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-sm text-gray-400 border-b border-white/10">
+                          <th className="pb-3 pr-4">Rank</th>
+                          <th className="pb-3 pr-4">Player</th>
+                          <th className="pb-3 pr-4 text-right">ELO</th>
+                          <th className="pb-3 text-right">W/L</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {topElo.map((player) => (
+                          <tr
+                            key={player.rank}
+                            className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                          >
+                            <td className="py-4 pr-4">
+                              <RankBadge rank={player.rank} />
+                            </td>
+                            <td className="py-4 pr-4">
+                              <div className="flex items-center gap-3">
+                                {player.avatarUrl ? (
+                                  <img
+                                    src={player.avatarUrl}
+                                    alt={player.username}
+                                    className="w-10 h-10 rounded-full"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-ghost-elevated flex items-center justify-center">
+                                    <UserIcon className="w-5 h-5 text-gray-500" />
+                                  </div>
+                                )}
+                                <span className="font-semibold">{player.username}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 pr-4 text-right">
+                              <span className="font-bold text-yellow-400">
+                                {player.elo?.toLocaleString() || 1000}
+                              </span>
+                            </td>
+                            <td className="py-4 text-right text-gray-400">
+                              <span className="text-green-400">{player.wins || 0}</span>
+                              <span className="text-gray-600">/</span>
+                              <span className="text-red-400">{player.losses || 0}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No ranked players yet
                   </div>
                 )}
               </CardContent>
@@ -381,6 +458,15 @@ function CaseIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+    </svg>
+  )
+}
+
+function TrophyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 15a6 6 0 006-6V4H6v5a6 6 0 006 6zm0 2a8 8 0 01-8-8V2h16v7a8 8 0 01-8 8zm-2 2h4v3h3v2H7v-2h3v-3z"/>
+      <path d="M4 4H2v5a4 4 0 004 4V9a2 2 0 01-2-2V4zM20 4h2v5a4 4 0 01-4 4V9a2 2 0 002-2V4z"/>
     </svg>
   )
 }

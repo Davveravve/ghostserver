@@ -35,6 +35,21 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Fetch top 10 players by ELO
+    const topElo = await prisma.player.findMany({
+      orderBy: { elo: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        steamId: true,
+        username: true,
+        avatarUrl: true,
+        elo: true,
+        wins: true,
+        losses: true,
+      },
+    })
+
     // Fetch top 10 players by cases opened
     const topCasesOpened = await prisma.player.findMany({
       orderBy: { casesOpened: 'desc' },
@@ -147,6 +162,14 @@ export async function GET(request: NextRequest) {
         avatarUrl: p.avatarUrl,
         souls: p.totalSoulsEarned,
         playtime: p.playtimeMinutes,
+      })),
+      topElo: topElo.map((p, i) => ({
+        rank: i + 1,
+        username: p.username,
+        avatarUrl: p.avatarUrl,
+        elo: p.elo,
+        wins: p.wins,
+        losses: p.losses,
       })),
       topCasesOpened: topCasesOpened.map((p, i) => ({
         rank: i + 1,
