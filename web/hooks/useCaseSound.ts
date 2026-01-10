@@ -21,8 +21,7 @@ export function useCaseSound() {
     oscillator.frequency.value = 800 * pitch // Higher pitch = faster
 
     gainNode.gain.setValueAtTime(0.15, ctx.currentTime)
-    gainNode.gain.exponentialDecayTo?.(0.001, ctx.currentTime + 0.05) ||
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
 
     oscillator.connect(gainNode)
     gainNode.connect(getMasterGain())
