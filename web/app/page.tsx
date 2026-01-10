@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 const wearColors: Record<string, string> = {
   FN: 'text-green-400 bg-green-400',
   MW: 'text-lime-400 bg-lime-400',

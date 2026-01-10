@@ -4,6 +4,8 @@ import { cases, getItemById } from '@/lib/items-data'
 import { prisma } from '@/lib/prisma'
 import { isAnnouncementItem } from '@/lib/item-utils'
 
+export const dynamic = 'force-dynamic'
+
 async function getRecentDrops() {
   const drops = await prisma.caseOpen.findMany({
     orderBy: { createdAt: 'desc' },
