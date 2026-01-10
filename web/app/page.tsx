@@ -74,8 +74,8 @@ export default async function HomePage() {
               <Image
                 src="/logo.png"
                 alt="Ghost Servers"
-                width={180}
-                height={180}
+                width={220}
+                height={220}
                 className="rounded-2xl mb-4"
               />
               <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-white">

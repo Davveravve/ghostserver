@@ -26,7 +26,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             router.push('/')
           }
         } else {
-          router.push('/api/auth/steam')
+          // Use window.location for Steam redirect (requires full page navigation)
+          window.location.href = '/api/auth/steam?returnTo=/admin'
         }
       } catch {
         router.push('/')
