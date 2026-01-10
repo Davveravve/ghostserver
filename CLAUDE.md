@@ -62,7 +62,54 @@
 ## Key Features
 
 - CS2 community servers (Surf, Retake, Competitive)
-- Souls economy system
+- Souls economy system (1 kill = 1 soul)
 - Case opening with CS2-style animation
 - Shared inventory across all servers
-- Premium membership tiers
+- Premium: ASCENDED tier (2x souls, dark theme)
+- ELO ranking system (Haunted -> Ascended)
+- Role system (Owner, Admin, Mod) with chat tags
+
+## Ranking System (ELO)
+
+| Rank | Min ELO | Color |
+|------|---------|-------|
+| Haunted | 0 | Grey |
+| Spirit | 800 | Light Blue |
+| Phantom | 1000 | Blue |
+| Specter | 1200 | Purple |
+| Wraith | 1400 | Magenta |
+| Shade | 1600 | Orange |
+| Ghost | 1800 | Gold |
+| Ascended | 2000 | Red |
+
+## Upcoming TODOs
+
+### Plugin (CS2)
+- [x] Souls economy (1 kill = 1 soul)
+- [x] Role system with chat colors
+- [x] Ranking/ELO system
+- [x] !elo, !souls, !help, !server commands
+- [ ] Damage dealt display after rounds
+- [ ] Clutch announcements
+- [ ] Map voting system
+- [ ] Retake integration (with RetakesPlugin)
+- [ ] Surf integration (with SharpTimer)
+
+### Website
+- [ ] Admin panel (/admin) - endast owner
+  - Hantera users (souls, roles)
+  - Skapa giveaways
+  - Posta news
+  - Server statistik
+- [ ] Leaderboard-sida (ELO, souls, kills)
+- [ ] Giveaway-system (random + leaderboard-baserade)
+- [ ] News/announcements
+- [ ] Player profiles med stats
+- [ ] Surf leaderboards per map
+
+### Servers
+- [ ] Installera CS2 dedicated server
+- [ ] Sätta upp Retake server
+- [ ] Sätta upp Surf server
+- [ ] Konfigurera GhostSouls plugin
+- [ ] DNS subdomains (retake.ghostservers.site, surf.ghostservers.site)

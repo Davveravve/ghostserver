@@ -23,6 +23,16 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
     private readonly Dictionary<ulong, PlayerData> _playerCache = new();
     private readonly Dictionary<ulong, DateTime> _lastKillTime = new();
 
+    // Damage tracking per round
+    private readonly Dictionary<ulong, Dictionary<ulong, int>> _roundDamage = new(); // attacker -> victim -> damage
+    private readonly Dictionary<ulong, int> _roundKills = new(); // player -> kills this round
+
+    // Clutch tracking
+    private bool _isClutchSituation = false;
+    private ulong _clutchPlayer = 0;
+    private int _clutchVsCount = 0;
+    private CsTeam _clutchTeam = CsTeam.None;
+
     // Sponsor/Ad rotation
     private int _currentAdIndex = 0;
     private DateTime _lastAdTime = DateTime.MinValue;
@@ -37,6 +47,8 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
+        RegisterEventHandler<EventRoundEnd>(OnRoundEnd);
+        RegisterEventHandler<EventPlayerHurt>(OnPlayerHurt);
 
         // Chat listener for role tags
         AddCommandListener("say", OnPlayerChat);
@@ -174,6 +186,9 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         var attacker = @event.Attacker;
         var victim = @event.Userid;
 
+        // Check for clutch situation after this death
+        CheckClutchSituation();
+
         if (attacker == null || !attacker.IsValid || attacker.IsBot) return HookResult.Continue;
         if (victim == null || !victim.IsValid) return HookResult.Continue;
 
@@ -182,6 +197,13 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         if (attacker.Team == victim.Team) return HookResult.Continue;
 
         var steamId = attacker.SteamID;
+
+        // Track round kills
+        if (!_roundKills.ContainsKey(steamId))
+        {
+            _roundKills[steamId] = 0;
+        }
+        _roundKills[steamId]++;
 
         // Anti-farm: Check kill interval
         if (_lastKillTime.TryGetValue(steamId, out var lastKill))
@@ -201,14 +223,14 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         if (@event.Headshot)
         {
             baseSouls += Config.Souls.HeadshotBonus;
-            bonusText = " (Headshot!)";
+            bonusText = " (HS)";
         }
 
         // Knife kill bonus
         if (@event.Weapon == "knife" || @event.Weapon.Contains("bayonet"))
         {
             baseSouls += Config.Souls.KnifeKillBonus;
-            bonusText = " (Knife kill!)";
+            bonusText = " (Knife!)";
         }
 
         // Apply role multiplier
@@ -223,15 +245,134 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
             data.TotalEarned += soulsEarned;
             data.IsDirty = true;
 
-            attacker.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Green}+{soulsEarned} {ChatColors.Default}souls{bonusText}{multiplierText}");
+            attacker.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Green}+{soulsEarned} {ChatColors.Default}soul{(soulsEarned > 1 ? "s" : "")}{bonusText}{multiplierText}");
         }
 
         return HookResult.Continue;
     }
 
+    private void CheckClutchSituation()
+    {
+        if (_isClutchSituation) return; // Already in clutch
+
+        var alivePlayers = Utilities.GetPlayers()
+            .Where(p => p.IsValid && !p.IsBot && p.PawnIsAlive)
+            .ToList();
+
+        var aliveCT = alivePlayers.Where(p => p.Team == CsTeam.CounterTerrorist).ToList();
+        var aliveT = alivePlayers.Where(p => p.Team == CsTeam.Terrorist).ToList();
+
+        // Check for 1vX situation
+        if (aliveCT.Count == 1 && aliveT.Count >= 2)
+        {
+            _isClutchSituation = true;
+            _clutchPlayer = aliveCT[0].SteamID;
+            _clutchVsCount = aliveT.Count;
+            _clutchTeam = CsTeam.CounterTerrorist;
+
+            aliveCT[0].PrintToChat($" {ChatColors.Gold}[Ghost] {ChatColors.Red}1v{_clutchVsCount}! {ChatColors.Default}You got this!");
+        }
+        else if (aliveT.Count == 1 && aliveCT.Count >= 2)
+        {
+            _isClutchSituation = true;
+            _clutchPlayer = aliveT[0].SteamID;
+            _clutchVsCount = aliveCT.Count;
+            _clutchTeam = CsTeam.Terrorist;
+
+            aliveT[0].PrintToChat($" {ChatColors.Gold}[Ghost] {ChatColors.Red}1v{_clutchVsCount}! {ChatColors.Default}You got this!");
+        }
+    }
+
     private HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
     {
-        // Could show sponsor message at round start
+        // Reset round tracking
+        _roundDamage.Clear();
+        _roundKills.Clear();
+        _isClutchSituation = false;
+        _clutchPlayer = 0;
+        _clutchVsCount = 0;
+
+        return HookResult.Continue;
+    }
+
+    private HookResult OnPlayerHurt(EventPlayerHurt @event, GameEventInfo info)
+    {
+        var attacker = @event.Attacker;
+        var victim = @event.Userid;
+
+        if (attacker == null || !attacker.IsValid || attacker.IsBot) return HookResult.Continue;
+        if (victim == null || !victim.IsValid) return HookResult.Continue;
+        if (attacker == victim) return HookResult.Continue; // Self damage
+        if (attacker.Team == victim.Team) return HookResult.Continue; // Team damage
+
+        var attackerId = attacker.SteamID;
+        var victimId = victim.SteamID;
+        var damage = @event.DmgHealth;
+
+        // Track damage
+        if (!_roundDamage.ContainsKey(attackerId))
+        {
+            _roundDamage[attackerId] = new Dictionary<ulong, int>();
+        }
+
+        if (!_roundDamage[attackerId].ContainsKey(victimId))
+        {
+            _roundDamage[attackerId][victimId] = 0;
+        }
+
+        _roundDamage[attackerId][victimId] += damage;
+
+        return HookResult.Continue;
+    }
+
+    private HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
+    {
+        // Show damage dealt to each player
+        foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot))
+        {
+            var steamId = player.SteamID;
+            if (_roundDamage.TryGetValue(steamId, out var damages) && damages.Count > 0)
+            {
+                var totalDamage = damages.Values.Sum();
+                var kills = _roundKills.TryGetValue(steamId, out var k) ? k : 0;
+
+                player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Damage dealt: {ChatColors.Green}{totalDamage} {ChatColors.Default}| Kills: {ChatColors.Green}{kills}");
+            }
+        }
+
+        // Announce clutch if successful
+        if (_isClutchSituation && _clutchPlayer != 0)
+        {
+            var winner = @event.Winner;
+            if ((winner == 2 && _clutchTeam == CsTeam.Terrorist) || (winner == 3 && _clutchTeam == CsTeam.CounterTerrorist))
+            {
+                // Clutch was successful!
+                var clutchPlayer = Utilities.GetPlayers().FirstOrDefault(p => p.IsValid && p.SteamID == _clutchPlayer);
+                if (clutchPlayer != null)
+                {
+                    var clutchBonus = Config.Souls.ClutchBonus * _clutchVsCount;
+
+                    // Award bonus souls
+                    if (_playerCache.TryGetValue(_clutchPlayer, out var data))
+                    {
+                        float multiplier = GetSoulsMultiplier(_clutchPlayer);
+                        int soulsEarned = (int)Math.Ceiling(clutchBonus * multiplier);
+                        data.Souls += soulsEarned;
+                        data.TotalEarned += soulsEarned;
+                        data.IsDirty = true;
+                    }
+
+                    // Announce to all
+                    foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot))
+                    {
+                        p.PrintToChat($" ");
+                        p.PrintToChat($" {ChatColors.Gold}>>> CLUTCH! {ChatColors.Green}{clutchPlayer.PlayerName} {ChatColors.Default}won a {ChatColors.Red}1v{_clutchVsCount}! {ChatColors.Gold}<<<");
+                        p.PrintToChat($" ");
+                    }
+                }
+            }
+        }
+
         return HookResult.Continue;
     }
 
