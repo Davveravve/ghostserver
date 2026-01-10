@@ -78,7 +78,7 @@ export default async function HomePage() {
                 height={180}
                 className="rounded-2xl mb-4"
               />
-              <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-gradient">
+              <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-white">
                 ghostservers.site
               </h1>
             </div>
