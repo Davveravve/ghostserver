@@ -10,7 +10,8 @@ export function useUISound() {
   // Soft click for buttons
   const playClick = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     const osc = ctx.createOscillator()
     osc.type = 'sine'
@@ -21,7 +22,7 @@ export function useUISound() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08)
 
     osc.connect(gain)
-    gain.connect(getMasterGain())
+    gain.connect(masterGain)
 
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.1)
@@ -30,7 +31,8 @@ export function useUISound() {
   // Hover sound - very subtle
   const playHover = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     const osc = ctx.createOscillator()
     osc.type = 'sine'
@@ -41,7 +43,7 @@ export function useUISound() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
 
     osc.connect(gain)
-    gain.connect(getMasterGain())
+    gain.connect(masterGain)
 
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.06)
@@ -50,7 +52,8 @@ export function useUISound() {
   // Success sound
   const playSuccess = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     const notes = [523.25, 659.25, 783.99] // C5, E5, G5
     notes.forEach((freq, i) => {
@@ -64,7 +67,7 @@ export function useUISound() {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.2)
 
       osc.connect(gain)
-      gain.connect(getMasterGain()!)
+      gain.connect(masterGain)
 
       osc.start(ctx.currentTime + i * 0.08)
       osc.stop(ctx.currentTime + i * 0.08 + 0.25)
@@ -74,7 +77,8 @@ export function useUISound() {
   // Error sound
   const playError = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     const osc = ctx.createOscillator()
     osc.type = 'sawtooth'
@@ -91,7 +95,7 @@ export function useUISound() {
 
     osc.connect(filter)
     filter.connect(gain)
-    gain.connect(getMasterGain())
+    gain.connect(masterGain)
 
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.25)
@@ -100,7 +104,8 @@ export function useUISound() {
   // Navigation click
   const playNav = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     // Soft pop
     const bufferSize = ctx.sampleRate * 0.03
@@ -119,7 +124,7 @@ export function useUISound() {
     gain.gain.value = 0.15
 
     source.connect(gain)
-    gain.connect(getMasterGain())
+    gain.connect(masterGain)
 
     source.start(ctx.currentTime)
   }, [initAudio, getMasterGain])
@@ -127,7 +132,8 @@ export function useUISound() {
   // Toggle sound (for switches)
   const playToggle = useCallback((isOn: boolean) => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     const osc = ctx.createOscillator()
     osc.type = 'sine'
@@ -138,7 +144,7 @@ export function useUISound() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1)
 
     osc.connect(gain)
-    gain.connect(getMasterGain())
+    gain.connect(masterGain)
 
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.12)
