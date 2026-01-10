@@ -12,7 +12,8 @@ export function useCaseSound() {
   // Tick sound - short click when item passes
   const playTick = useCallback((pitch: number = 1) => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     const oscillator = ctx.createOscillator()
     const gainNode = ctx.createGain()
@@ -24,7 +25,7 @@ export function useCaseSound() {
     gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
 
     oscillator.connect(gainNode)
-    gainNode.connect(getMasterGain())
+    gainNode.connect(masterGain)
 
     oscillator.start(ctx.currentTime)
     oscillator.stop(ctx.currentTime + 0.05)
@@ -33,7 +34,8 @@ export function useCaseSound() {
   // Mechanical tick - more CS2-like
   const playMechanicalTick = useCallback((intensity: number = 1) => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     // Click sound using noise burst
     const bufferSize = ctx.sampleRate * 0.02 // 20ms
@@ -60,7 +62,7 @@ export function useCaseSound() {
 
     source.connect(filter)
     filter.connect(gainNode)
-    gainNode.connect(getMasterGain())
+    gainNode.connect(masterGain)
 
     source.start(ctx.currentTime)
   }, [initAudio, getMasterGain])
@@ -68,7 +70,8 @@ export function useCaseSound() {
   // Whoosh sound - for slowdown
   const playWhoosh = useCallback((duration: number = 0.5, reverse: boolean = false) => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     // Create noise
     const bufferSize = ctx.sampleRate * duration
@@ -101,7 +104,7 @@ export function useCaseSound() {
 
     source.connect(filter)
     filter.connect(gainNode)
-    gainNode.connect(getMasterGain())
+    gainNode.connect(masterGain)
 
     source.start(ctx.currentTime)
   }, [initAudio, getMasterGain])
@@ -109,7 +112,8 @@ export function useCaseSound() {
   // Win reveal sound - satisfying landing sound
   const playWinReveal = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     // Main impact sound
     const baseFreq = 500
@@ -128,7 +132,7 @@ export function useCaseSound() {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3)
 
       osc.connect(gain)
-      gain.connect(getMasterGain()!)
+      gain.connect(masterGain)
 
       osc.start(ctx.currentTime + delay)
       osc.stop(ctx.currentTime + delay + 0.4)
@@ -145,7 +149,7 @@ export function useCaseSound() {
     bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25)
 
     bass.connect(bassGain)
-    bassGain.connect(getMasterGain())
+    bassGain.connect(masterGain)
 
     bass.start(ctx.currentTime)
     bass.stop(ctx.currentTime + 0.3)
@@ -154,7 +158,8 @@ export function useCaseSound() {
   // Open case click sound
   const playOpenClick = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     // Mechanical latch sound
     const bufferSize = ctx.sampleRate * 0.1
@@ -181,7 +186,7 @@ export function useCaseSound() {
 
     source.connect(filter)
     filter.connect(gainNode)
-    gainNode.connect(getMasterGain())
+    gainNode.connect(masterGain)
 
     source.start(ctx.currentTime)
   }, [initAudio, getMasterGain])
@@ -189,7 +194,8 @@ export function useCaseSound() {
   // Spin start - rising whoosh
   const playSpinStart = useCallback(() => {
     const ctx = initAudio()
-    if (!ctx || !getMasterGain()) return
+    const masterGain = getMasterGain()
+    if (!ctx || !masterGain) return
 
     // Rising tone
     const osc = ctx.createOscillator()
@@ -208,7 +214,7 @@ export function useCaseSound() {
 
     osc.connect(filter)
     filter.connect(gain)
-    gain.connect(getMasterGain())
+    gain.connect(masterGain)
 
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.5)
