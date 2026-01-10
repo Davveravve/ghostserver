@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a24;
+  --accent-primary: #8b5cf6;
+  --accent-secondary: #06b6d4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Rarity glow effects */
+.rarity-common {
+  box-shadow: 0 0 10px rgba(156, 163, 175, 0.3);
+}
+
+.rarity-uncommon {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+.rarity-rare {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+.rarity-epic {
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
+}
+
+.rarity-legendary {
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+}
+
+.rarity-ultra {
+  box-shadow: 0 0 40px rgba(239, 68, 68, 0.7);
+  animation: pulse-glow-ultra 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-ultra {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(239, 68, 68, 0.9);
+  }
+}
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(18, 18, 26, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

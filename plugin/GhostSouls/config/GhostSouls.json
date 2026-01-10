@@ -1,0 +1,68 @@
+{
+  "ApiUrl": "https://ghostservers.site",
+  "ApiKey": "your-secure-api-key-here",
+  "WebsiteUrl": "https://ghostservers.site",
+  "ServerName": "Ghost Gaming | Retake #1",
+  "Souls": {
+    "KillReward": 5,
+    "HeadshotBonus": 2,
+    "KnifeKillBonus": 10,
+    "AssistReward": 2,
+    "MVPBonus": 5,
+    "RoundWinBonus": 3,
+    "MinKillIntervalSeconds": 5
+  },
+  "Sponsors": {
+    "Enabled": true,
+    "IntervalSeconds": 120,
+    "Ads": [
+      {
+        "Type": "chat",
+        "Message": "Open cases at ghostservers.site and win rare skins!",
+        "Sponsor": "Ghost Servers",
+        "Url": "https://ghostservers.site/cases"
+      },
+      {
+        "Type": "chat",
+        "Message": "Check your inventory: !inventory | Your souls: !souls",
+        "Sponsor": "Ghost Servers",
+        "Url": ""
+      },
+      {
+        "Type": "center",
+        "Message": "ghostservers.site - Open Cases, Win Skins!",
+        "Sponsor": "Ghost Servers",
+        "Url": ""
+      }
+    ]
+  },
+  "Servers": {
+    "Servers": [
+      {
+        "Name": "Surf",
+        "Address": "surf.ghostservers.site:27015",
+        "Description": "Surf maps with timer"
+      },
+      {
+        "Name": "Bhop",
+        "Address": "bhop.ghostservers.site:27015",
+        "Description": "Bunny hop maps"
+      },
+      {
+        "Name": "Retake #1",
+        "Address": "retake1.ghostservers.site:27015",
+        "Description": "5v5 Retake"
+      },
+      {
+        "Name": "Retake #2",
+        "Address": "retake2.ghostservers.site:27015",
+        "Description": "5v5 Retake"
+      },
+      {
+        "Name": "Competitive",
+        "Address": "comp.ghostservers.site:27015",
+        "Description": "5v5 Competitive"
+      }
+    ]
+  }
+}

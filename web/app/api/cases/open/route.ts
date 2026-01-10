@@ -1,0 +1,123 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { jwtVerify } from 'jose'
+import { prisma } from '@/lib/prisma'
+import { getCaseById, getCaseItems } from '@/lib/items-data'
+import { getRarityFromType } from '@/lib/item-utils'
+
+export async function POST(request: NextRequest) {
+  const token = request.cookies.get('ghost-session')?.value
+
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const secret = new TextEncoder().encode(
+      process.env.NEXTAUTH_SECRET || 'your-secret-key'
+    )
+    const { payload } = await jwtVerify(token, secret)
+    const steamId = payload.steamId as string
+
+    const { caseId } = await request.json()
+
+    // Hämta case data SERVER-SIDE
+    const caseData = getCaseById(caseId)
+    if (!caseData) {
+      return NextResponse.json({ error: 'Case not found' }, { status: 404 })
+    }
+
+    const player = await prisma.player.findUnique({
+      where: { steamId },
+    })
+
+    if (!player) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+    }
+
+    if (player.souls < caseData.cost) {
+      return NextResponse.json({ error: 'Not enough souls' }, { status: 400 })
+    }
+
+    // VÄLJ VINNARE SERVER-SIDE (kan inte fuskas!)
+    const items = getCaseItems(caseId)
+    const winnerIndex = Math.floor(Math.random() * items.length)
+    const wonItem = items[winnerIndex]
+    const floatValue = wonItem.min_float + Math.random() * (wonItem.max_float - wonItem.min_float)
+
+    // Kör allt i en transaktion
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Dra av souls och öka casesOpened
+      const updatedPlayer = await tx.player.update({
+        where: { id: player.id },
+        data: {
+          souls: { decrement: caseData.cost },
+          casesOpened: { increment: 1 },
+        },
+      })
+
+      // 2. Skapa inventory item med rarity baserat på item type
+      const rarity = getRarityFromType(wonItem.type)
+      const inventoryItem = await tx.inventoryItem.create({
+        data: {
+          playerId: player.id,
+          itemId: wonItem.id,
+          name: wonItem.name,
+          weapon: wonItem.weapon,
+          skinName: wonItem.name, // skin name is stored in name field
+          wear: wonItem.wear,
+          floatValue: floatValue,
+          imageUrl: wonItem.image_url,
+          dopplerPhase: wonItem.doppler_phase || null,
+          itemType: wonItem.type,
+          rarity: rarity,
+          obtainedFrom: caseData.name,
+        },
+      })
+
+      // 3. Logga case open
+      await tx.caseOpen.create({
+        data: {
+          playerId: player.id,
+          caseName: caseData.name,
+          caseId,
+          itemId: wonItem.id,
+          itemName: wonItem.name,
+          itemWeapon: wonItem.weapon,
+          itemWear: wonItem.wear,
+          floatValue: floatValue,
+          soulsCost: caseData.cost,
+        },
+      })
+
+      // 4. Logga soul transaction
+      await tx.soulTransaction.create({
+        data: {
+          playerId: player.id,
+          amount: -caseData.cost,
+          type: 'case_open',
+          description: `Opened ${caseData.name}`,
+          balanceAfter: updatedPlayer.souls,
+        },
+      })
+
+      return { updatedPlayer, inventoryItem }
+    })
+
+    return NextResponse.json({
+      success: true,
+      newBalance: result.updatedPlayer.souls,
+      inventoryItem: result.inventoryItem,
+      wonItem: {
+        ...wonItem,
+        floatValue: floatValue,
+      },
+      winnerIndex: winnerIndex,
+    })
+  } catch (error) {
+    console.error('Failed to open case:', error)
+    return NextResponse.json(
+      { error: 'Failed to open case' },
+      { status: 500 }
+    )
+  }
+}

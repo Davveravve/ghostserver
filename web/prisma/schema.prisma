@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Player account linked to Steam
+model Player {
+  id                String   @id @default(cuid())
+  steamId           String   @unique
+  username          String
+  avatarUrl         String?
+
+  // Economy
+  souls             Int      @default(0)
+  totalSoulsEarned  Int      @default(0)
+
+  // Stats
+  playtimeMinutes   Int      @default(0)
+  totalKills        Int      @default(0)
+  casesOpened       Int      @default(0)
+
+  // Premium
+  isPremium         Boolean  @default(false)
+  premiumTier       String   @default("none") // none, bronze, silver, gold
+  premiumExpiresAt  DateTime?
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  lastSeenAt        DateTime @default(now())
+
+  // Relations
+  inventory         InventoryItem[]
+  caseOpens         CaseOpen[]
+  transactions      SoulTransaction[]
+}
+
+// Item in player's inventory
+model InventoryItem {
+  id              String   @id @default(cuid())
+
+  // Owner
+  playerId        String
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  // Item details (stored for quick access, references items-data.ts)
+  itemId          Int
+  name            String
+  weapon          String
+  skinName        String
+  wear            String   // FN, MW, FT, WW, BS
+  floatValue      Float    // Actual float value when won
+  imageUrl        String
+
+  // Doppler phase if applicable
+  dopplerPhase    String?
+
+  // Type: skin, knife, gloves
+  itemType        String
+
+  // Rarity for sorting/trade-ups
+  rarity          String   @default("common") // common, uncommon, rare, epic, legendary, ultra
+
+  // Equip status
+  equippedCt      Boolean  @default(false)
+  equippedT       Boolean  @default(false)
+
+  // Favorite status
+  isFavorite      Boolean  @default(false)
+
+  // How it was obtained
+  obtainedAt      DateTime @default(now())
+  obtainedFrom    String?  // case name or "drop"
+
+  @@index([playerId])
+  @@index([itemType])
+  @@index([rarity])
+}
+
+// Case opening history
+model CaseOpen {
+  id          String   @id @default(cuid())
+
+  playerId    String
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  caseName    String
+  caseId      Int
+
+  // Won item
+  itemId      Int
+  itemName    String
+  itemWeapon  String
+  itemWear    String
+  floatValue  Float
+
+  // Cost
+  soulsCost   Int
+
+  createdAt   DateTime @default(now())
+
+  @@index([playerId])
+  @@index([createdAt])
+}
+
+// Soul transaction history
+model SoulTransaction {
+  id          String   @id @default(cuid())
+
+  playerId    String
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  amount      Int      // Positive = earned, Negative = spent
+  type        String   // kill, playtime, case_open, admin, bonus
+  description String?
+
+  // Balance after transaction
+  balanceAfter Int
+
+  createdAt   DateTime @default(now())
+
+  @@index([playerId])
+  @@index([createdAt])
+}
+
+// Server tracking (for authenticating plugin requests)
+model Server {
+  id            String   @id @default(cuid())
+  name          String
+  ip            String?
+  port          Int?
+  apiKey        String   @unique // For authenticating server requests
+
+  isOnline      Boolean  @default(false)
+  currentPlayers Int     @default(0)
+  maxPlayers    Int      @default(32)
+  currentMap    String?
+
+  lastHeartbeat DateTime?
+  createdAt     DateTime @default(now())
+}
