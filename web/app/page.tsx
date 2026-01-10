@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { prisma } from '@/lib/prisma'
@@ -69,9 +70,18 @@ export default async function HomePage() {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="font-heading text-5xl md:text-7xl font-bold tracking-tight mb-6">
-              <span className="text-gradient">GHOST</span> GAMING
-            </h1>
+            <div className="flex flex-col items-center mb-8">
+              <Image
+                src="/logo.png"
+                alt="Ghost Servers"
+                width={180}
+                height={180}
+                className="rounded-2xl mb-4"
+              />
+              <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-gradient">
+                ghostservers.site
+              </h1>
+            </div>
             <p className="text-xl text-gray-400 mb-8">
               Premium CS2 community servers with a unique souls economy.
               Surf, Retake, and Compete while earning rewards.

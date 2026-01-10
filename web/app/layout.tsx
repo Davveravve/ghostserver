@@ -7,9 +7,13 @@ import { SoundProvider } from '@/components/providers/SoundProvider'
 import { GlobalClickSound } from '@/components/providers/GlobalClickSound'
 
 export const metadata: Metadata = {
-  title: 'Ghost Gaming | CS2 Community Servers',
+  title: 'Ghost Servers | CS2 Community Servers',
   description: 'Premium CS2 community servers with Surf, Retake & Competitive. Earn souls, open cases, collect rare items.',
   keywords: ['CS2', 'Counter-Strike', 'Surf', 'Retake', 'Gaming', 'Community Server'],
+  icons: {
+    icon: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
 }
 
 export default function RootLayout({
