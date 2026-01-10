@@ -10,8 +10,15 @@ public class PlayerData
     public int TotalEarned { get; set; }
     public List<EquippedSkin> EquippedSkins { get; set; } = new();
     public bool IsDirty { get; set; } = false;
-    public string Role { get; set; } = "default"; // owner, admin, mod, gold, silver, bronze, default
-    public string PremiumTier { get; set; } = "none"; // none, bronze, silver, gold
+    public string Role { get; set; } = "default";
+    public string PremiumTier { get; set; } = "none";
+
+    // Ranking
+    public int Elo { get; set; } = 1000;
+    public int Wins { get; set; } = 0;
+    public int Losses { get; set; } = 0;
+    public int RoundKills { get; set; } = 0; // Kills this round (for clutch detection)
+    public int RoundDeaths { get; set; } = 0;
 }
 
 /// <summary>
@@ -41,6 +48,9 @@ public class ApiPlayerResponse
     public int TotalSoulsEarned { get; set; }
     public int PlaytimeMinutes { get; set; }
     public string PremiumTier { get; set; } = "none";
+    public int Elo { get; set; } = 1000;
+    public int Wins { get; set; } = 0;
+    public int Losses { get; set; } = 0;
     public List<EquippedSkin>? EquippedSkins { get; set; }
 }
 

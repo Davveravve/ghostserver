@@ -59,6 +59,9 @@ export async function GET(
       totalSoulsEarned: player.totalSoulsEarned,
       playtimeMinutes: player.playtimeMinutes,
       premiumTier: player.premiumTier,
+      elo: player.elo,
+      wins: player.wins,
+      losses: player.losses,
       equippedSkins
     })
   } catch (error) {

@@ -359,6 +359,43 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
     #endregion
 
+    #region Ranking System
+
+    private RankInfo GetRankFromElo(int elo)
+    {
+        var ranks = Config.Ranking.Ranks.OrderByDescending(r => r.MinElo).ToList();
+        foreach (var rank in ranks)
+        {
+            if (elo >= rank.MinElo)
+            {
+                return rank;
+            }
+        }
+        return ranks.Last();
+    }
+
+    private RankInfo? GetNextRank(int elo)
+    {
+        var ranks = Config.Ranking.Ranks.OrderBy(r => r.MinElo).ToList();
+        foreach (var rank in ranks)
+        {
+            if (rank.MinElo > elo)
+            {
+                return rank;
+            }
+        }
+        return null; // Already at max rank
+    }
+
+    private string GetRankDisplay(int elo)
+    {
+        var rank = GetRankFromElo(elo);
+        var color = GetChatColor(rank.Color);
+        return $"{color}[{rank.Name}]";
+    }
+
+    #endregion
+
     #region Skin System
 
     private void ApplyPlayerSkins(CCSPlayerController player, ulong steamId)
@@ -593,6 +630,48 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         });
     }
 
+    [ConsoleCommand("css_elo", "Show your ELO and rank")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnEloCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+
+        if (_playerCache.TryGetValue(player.SteamID, out var data))
+        {
+            var rankInfo = GetRankFromElo(data.Elo);
+            var rankColor = GetChatColor(rankInfo.Color);
+            var winrate = data.Wins + data.Losses > 0
+                ? (data.Wins * 100 / (data.Wins + data.Losses))
+                : 0;
+
+            player.PrintToChat($" ");
+            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Your Rank: {rankColor}{rankInfo.Name}");
+            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}ELO: {ChatColors.Green}{data.Elo} {ChatColors.Default}| W/L: {ChatColors.Green}{data.Wins}{ChatColors.Default}/{ChatColors.Red}{data.Losses} {ChatColors.Default}({winrate}%)");
+
+            // Show progress to next rank
+            var nextRank = GetNextRank(data.Elo);
+            if (nextRank != null)
+            {
+                var eloNeeded = nextRank.MinElo - data.Elo;
+                var nextColor = GetChatColor(nextRank.Color);
+                player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Next: {nextColor}{nextRank.Name} {ChatColors.Grey}({eloNeeded} ELO needed)");
+            }
+            player.PrintToChat($" ");
+        }
+        else
+        {
+            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Red}Could not load your data.");
+        }
+    }
+
+    [ConsoleCommand("css_stats", "Show your stats")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnStatsCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        // Alias for !elo
+        OnEloCommand(player, command);
+    }
+
     [ConsoleCommand("css_discord", "Show Discord invite link")]
     [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void OnDiscordCommand(CCSPlayerController? player, CommandInfo command)
@@ -727,10 +806,10 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         player.PrintToChat($" {ChatColors.Purple}======== GhostServers.site ========");
         player.PrintToChat($" {ChatColors.Default}Website: {ChatColors.Green}{Config.WebsiteUrl}");
         player.PrintToChat($" ");
-        player.PrintToChat($" {ChatColors.Yellow}!souls {ChatColors.Default}- Check balance | {ChatColors.Yellow}!rank {ChatColors.Default}- Your rank");
-        player.PrintToChat($" {ChatColors.Yellow}!inventory {ChatColors.Default}- View skins | {ChatColors.Yellow}!cases {ChatColors.Default}- Open cases");
-        player.PrintToChat($" {ChatColors.Yellow}!top {ChatColors.Default}- Leaderboard | {ChatColors.Yellow}!refresh {ChatColors.Default}- Sync data");
-        player.PrintToChat($" {ChatColors.Yellow}!server {ChatColors.Default}- Server list | {ChatColors.Yellow}!discord {ChatColors.Default}- Discord");
+        player.PrintToChat($" {ChatColors.Yellow}!souls {ChatColors.Default}- Balance | {ChatColors.Yellow}!elo {ChatColors.Default}- Rank & stats");
+        player.PrintToChat($" {ChatColors.Yellow}!inventory {ChatColors.Default}- Skins | {ChatColors.Yellow}!cases {ChatColors.Default}- Open cases");
+        player.PrintToChat($" {ChatColors.Yellow}!top {ChatColors.Default}- Leaderboard | {ChatColors.Yellow}!server {ChatColors.Default}- Servers");
+        player.PrintToChat($" {ChatColors.Yellow}!discord {ChatColors.Default}- Discord | {ChatColors.Yellow}!refresh {ChatColors.Default}- Sync");
         player.PrintToChat($" ");
         player.PrintToChat($" {ChatColors.Default}Your multiplier: {ChatColors.Gold}{settings.SoulsMultiplier:0.#}x souls");
         player.PrintToChat($" {ChatColors.Grey}Become ASCENDED for 2x souls!");
@@ -768,6 +847,9 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
                 Souls = apiResponse.Souls,
                 TotalEarned = apiResponse.TotalSoulsEarned,
                 PremiumTier = apiResponse.PremiumTier ?? "none",
+                Elo = apiResponse.Elo,
+                Wins = apiResponse.Wins,
+                Losses = apiResponse.Losses,
                 EquippedSkins = apiResponse.EquippedSkins ?? new List<EquippedSkin>()
             };
         }

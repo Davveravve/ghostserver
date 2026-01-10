@@ -23,6 +23,11 @@ model Player {
   totalKills        Int      @default(0)
   casesOpened       Int      @default(0)
 
+  // Ranking
+  elo               Int      @default(1000)
+  wins              Int      @default(0)
+  losses            Int      @default(0)
+
   // Premium
   isPremium         Boolean  @default(false)
   premiumTier       String   @default("none") // none, ascended
