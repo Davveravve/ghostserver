@@ -25,18 +25,19 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const query = searchParams.get('q') || ''
 
-  if (!query.trim()) {
-    return NextResponse.json({ players: [] })
-  }
-
   try {
+    // Om ingen query, visa alla spelare (senaste först)
+    const whereClause = query.trim()
+      ? {
+          OR: [
+            { username: { contains: query } },
+            { steamId: { contains: query } },
+          ],
+        }
+      : {}
+
     const players = await prisma.player.findMany({
-      where: {
-        OR: [
-          { username: { contains: query } },
-          { steamId: { contains: query } },
-        ],
-      },
+      where: whereClause,
       select: {
         id: true,
         steamId: true,
@@ -48,8 +49,8 @@ export async function GET(request: NextRequest) {
         isPremium: true,
         createdAt: true,
       },
-      take: 20,
-      orderBy: { souls: 'desc' },
+      take: 50,
+      orderBy: { createdAt: 'desc' },
     })
 
     return NextResponse.json({ players })

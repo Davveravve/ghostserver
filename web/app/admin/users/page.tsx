@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -19,15 +19,33 @@ interface Player {
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [players, setPlayers] = useState<Player[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [editSouls, setEditSouls] = useState('')
   const [editElo, setEditElo] = useState('')
   const [editPremium, setEditPremium] = useState('none')
 
-  async function searchPlayers() {
-    if (!searchQuery.trim()) return
+  // Load all players on mount
+  useEffect(() => {
+    loadAllPlayers()
+  }, [])
 
+  async function loadAllPlayers() {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/admin/users/search?q=')
+      if (res.ok) {
+        const data = await res.json()
+        setPlayers(data.players)
+      }
+    } catch (error) {
+      console.error('Failed to load players:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function searchPlayers() {
     setIsLoading(true)
     try {
       const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(searchQuery)}`)
@@ -115,7 +133,9 @@ export default function AdminUsersPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Results */}
         <div>
-          <h2 className="font-heading text-xl font-bold mb-4">Search Results</h2>
+          <h2 className="font-heading text-xl font-bold mb-4">
+            {searchQuery ? 'Search Results' : 'All Players'} ({players.length})
+          </h2>
           {players.length > 0 ? (
             <div className="space-y-2">
               {players.map((player) => (
@@ -152,7 +172,7 @@ export default function AdminUsersPage() {
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
-              {isLoading ? 'Searching...' : 'No results. Try searching for a player.'}
+              {isLoading ? 'Loading...' : 'No players found.'}
             </div>
           )}
         </div>
