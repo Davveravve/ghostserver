@@ -12,7 +12,7 @@ model Player {
   id                String   @id @default(cuid())
   steamId           String   @unique
   username          String
-  avatarUrl         String?
+  avatarUrl         String?  @db.Text
 
   // Economy
   souls             Int      @default(0)
@@ -54,7 +54,7 @@ model InventoryItem {
   skinName        String
   wear            String   // FN, MW, FT, WW, BS
   floatValue      Float    // Actual float value when won
-  imageUrl        String
+  imageUrl        String   @db.Text
 
   // Doppler phase if applicable
   dopplerPhase    String?
