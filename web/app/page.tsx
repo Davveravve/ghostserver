@@ -79,7 +79,7 @@ export default async function HomePage() {
                 className="rounded-2xl mb-4"
               />
               <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-white">
-                ghostservers.site
+                GhostServers.site
               </h1>
             </div>
             <p className="text-xl text-gray-400 mb-8">
