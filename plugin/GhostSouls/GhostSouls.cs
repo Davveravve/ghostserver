@@ -301,13 +301,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         // Check premium tier from player cache
         if (_playerCache.TryGetValue(steamId, out var data))
         {
-            return data.PremiumTier switch
-            {
-                "gold" => "gold",
-                "silver" => "silver",
-                "bronze" => "bronze",
-                _ => "default"
-            };
+            if (data.PremiumTier == "ascended") return "ascended";
         }
 
         return "default";
@@ -351,6 +345,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
             "magenta" => ChatColors.Magenta,
             "grey" => ChatColors.Grey,
             "white" => ChatColors.White,
+            "black" => ChatColors.Grey, // CS2 har ingen svart, använder mörkgrå
             _ => ChatColors.Default
         };
     }
@@ -631,7 +626,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
         if (role == "default")
         {
-            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Yellow}Get premium at {Config.WebsiteUrl}/premium for bonus souls!");
+            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Grey}Become ASCENDED at {Config.WebsiteUrl}/premium for 2x souls!");
         }
     }
 
@@ -738,7 +733,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         player.PrintToChat($" {ChatColors.Yellow}!server {ChatColors.Default}- Server list | {ChatColors.Yellow}!discord {ChatColors.Default}- Discord");
         player.PrintToChat($" ");
         player.PrintToChat($" {ChatColors.Default}Your multiplier: {ChatColors.Gold}{settings.SoulsMultiplier:0.#}x souls");
-        player.PrintToChat($" {ChatColors.Gold}Get premium for up to 3x souls!");
+        player.PrintToChat($" {ChatColors.Grey}Become ASCENDED for 2x souls!");
         player.PrintToChat($" {ChatColors.Purple}===================================");
     }
 

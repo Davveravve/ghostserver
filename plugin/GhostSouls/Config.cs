@@ -132,9 +132,7 @@ public class RolesConfig
         { "owner", new RoleSettings { Tag = "[OWNER]", ChatColor = "Red", TagColor = "DarkRed", SoulsMultiplier = 5.0f } },
         { "admin", new RoleSettings { Tag = "[ADMIN]", ChatColor = "Orange", TagColor = "Orange", SoulsMultiplier = 3.0f } },
         { "mod", new RoleSettings { Tag = "[MOD]", ChatColor = "LightGreen", TagColor = "Green", SoulsMultiplier = 2.0f } },
-        { "gold", new RoleSettings { Tag = "[GOLD]", ChatColor = "Gold", TagColor = "Gold", SoulsMultiplier = 3.0f } },
-        { "silver", new RoleSettings { Tag = "[SILVER]", ChatColor = "LightBlue", TagColor = "Grey", SoulsMultiplier = 2.0f } },
-        { "bronze", new RoleSettings { Tag = "[BRONZE]", ChatColor = "Orange", TagColor = "Orange", SoulsMultiplier = 1.5f } },
+        { "ascended", new RoleSettings { Tag = "[ASCENDED]", ChatColor = "Grey", TagColor = "Black", SoulsMultiplier = 2.0f } },
         { "default", new RoleSettings { Tag = "", ChatColor = "Default", TagColor = "Default", SoulsMultiplier = 1.0f } }
     };
 }

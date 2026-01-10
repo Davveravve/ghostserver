@@ -25,7 +25,7 @@ model Player {
 
   // Premium
   isPremium         Boolean  @default(false)
-  premiumTier       String   @default("none") // none, bronze, silver, gold
+  premiumTier       String   @default("none") // none, ascended
   premiumExpiresAt  DateTime?
 
   // Timestamps
