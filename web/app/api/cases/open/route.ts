@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
 
     // VÄLJ VINNARE SERVER-SIDE (kan inte fuskas!)
     const items = getCaseItems(caseId)
+    console.log('Items count for case', caseId, ':', items.length)
+
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: 'No items in case' }, { status: 500 })
+    }
+
     const winnerIndex = Math.floor(Math.random() * items.length)
     const wonItem = items[winnerIndex]
     const floatValue = wonItem.min_float + Math.random() * (wonItem.max_float - wonItem.min_float)
@@ -115,8 +121,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Failed to open case:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Failed to open case' },
+      { error: 'Failed to open case', details: errorMessage },
       { status: 500 }
     )
   }
