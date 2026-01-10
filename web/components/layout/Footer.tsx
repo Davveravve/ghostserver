@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export function Footer() {
   return (
@@ -7,12 +8,16 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent-primary to-accent-secondary flex items-center justify-center">
-                <span className="text-xl font-bold">G</span>
-              </div>
+            <div className="flex items-center gap-3 mb-4">
+              <Image
+                src="/logo.png"
+                alt="Ghost Servers"
+                width={40}
+                height={40}
+                className="rounded-lg"
+              />
               <span className="font-heading text-xl font-bold tracking-wide">
-                GHOST GAMING
+                GhostServers.site
               </span>
             </div>
             <p className="text-gray-400 text-sm max-w-md">
@@ -71,7 +76,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">
-            &copy; {new Date().getFullYear()} Ghost Gaming. All rights reserved.
+            &copy; {new Date().getFullYear()} GhostServers.site
           </p>
           <div className="flex items-center gap-6">
             <Link href="#" className="text-gray-400 hover:text-white transition-colors">
