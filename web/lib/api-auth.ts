@@ -1,7 +1,10 @@
 import { NextRequest } from 'next/server'
 import { prisma } from './prisma'
 
-export async function authenticateServer(request: NextRequest) {
+type AuthError = { error: string; status: number }
+type AuthSuccess = { server: Awaited<ReturnType<typeof prisma.server.findUnique>> & {} }
+
+export async function authenticateServer(request: NextRequest): Promise<AuthError | AuthSuccess> {
   const apiKey = request.headers.get('x-api-key')
 
   if (!apiKey) {
