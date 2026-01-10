@@ -26,7 +26,7 @@ async function getRecentDrops() {
       wear: drop.itemWear,
       imageUrl: item?.image_url || null,
       isRare: isAnnouncementItem(drop.itemWeapon, drop.itemName, null),
-      createdAt: drop.createdAt,
+      createdAt: drop.createdAt.toISOString(),
     }
   })
 }
