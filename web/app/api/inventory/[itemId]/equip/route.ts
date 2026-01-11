@@ -1,6 +1,124 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
+import { getPaintKit, getWeaponDefIndex, knifeDefIndex } from '@/lib/paint-kits'
+
+// Knife name to CS2 weapon name mapping
+const knifeNameToWeapon: Record<string, string> = {
+  'Karambit': 'weapon_knife_karambit',
+  'M9 Bayonet': 'weapon_knife_m9_bayonet',
+  'Bayonet': 'weapon_knife_bayonet',
+  'Butterfly Knife': 'weapon_knife_butterfly',
+  'Flip Knife': 'weapon_knife_flip',
+  'Gut Knife': 'weapon_knife_gut',
+  'Huntsman Knife': 'weapon_knife_tactical',
+  'Falchion Knife': 'weapon_knife_falchion',
+  'Bowie Knife': 'weapon_knife_survival_bowie',
+  'Shadow Daggers': 'weapon_knife_push',
+  'Navaja Knife': 'weapon_knife_gypsy_jackknife',
+  'Stiletto Knife': 'weapon_knife_stiletto',
+  'Talon Knife': 'weapon_knife_widowmaker',
+  'Ursus Knife': 'weapon_knife_ursus',
+  'Classic Knife': 'weapon_knife_css',
+  'Paracord Knife': 'weapon_knife_cord',
+  'Survival Knife': 'weapon_knife_canis',
+  'Nomad Knife': 'weapon_knife_outdoor',
+  'Skeleton Knife': 'weapon_knife_skeleton',
+  'Kukri Knife': 'weapon_knife_kukri',
+}
+
+// Sync to WeaponPaints database tables
+async function syncToWeaponPaints(
+  steamId: string,
+  item: { weapon: string; skinName: string; floatValue: number; itemType: string },
+  team: 'ct' | 't' | 'both'
+) {
+  try {
+    const paintKit = getPaintKit(item.weapon, item.skinName)
+    const isKnife = item.itemType === 'knife'
+
+    // WeaponPaints uses: 2 = T, 3 = CT
+    const teams: number[] = []
+    if (team === 'ct' || team === 'both') teams.push(3)
+    if (team === 't' || team === 'both') teams.push(2)
+
+    if (isKnife) {
+      // Get knife weapon name and def index
+      const knifeWeaponName = knifeNameToWeapon[item.weapon] || 'weapon_knife'
+      const knifeDefIdx = knifeDefIndex[item.weapon] || 500
+
+      for (const weaponTeam of teams) {
+        // Update wp_player_knife table
+        await prisma.$executeRaw`
+          INSERT INTO wp_player_knife (steamid, weapon_team, knife)
+          VALUES (${steamId}, ${weaponTeam}, ${knifeWeaponName})
+          ON DUPLICATE KEY UPDATE knife = ${knifeWeaponName}
+        `
+
+        // Also update wp_player_skins with the knife skin
+        await prisma.$executeRaw`
+          INSERT INTO wp_player_skins (steamid, weapon_team, weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed)
+          VALUES (${steamId}, ${weaponTeam}, ${knifeDefIdx}, ${paintKit}, ${item.floatValue}, 0)
+          ON DUPLICATE KEY UPDATE
+            weapon_paint_id = ${paintKit},
+            weapon_wear = ${item.floatValue}
+        `
+      }
+    } else {
+      // Regular weapon skin
+      const weaponDefIdx = getWeaponDefIndex(item.weapon)
+
+      for (const weaponTeam of teams) {
+        await prisma.$executeRaw`
+          INSERT INTO wp_player_skins (steamid, weapon_team, weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed)
+          VALUES (${steamId}, ${weaponTeam}, ${weaponDefIdx}, ${paintKit}, ${item.floatValue}, 0)
+          ON DUPLICATE KEY UPDATE
+            weapon_paint_id = ${paintKit},
+            weapon_wear = ${item.floatValue}
+        `
+      }
+    }
+
+    console.log(`[WeaponPaints] Synced ${item.weapon} | ${item.skinName} (PK=${paintKit}) for ${steamId}`)
+  } catch (error) {
+    console.error('[WeaponPaints] Sync error:', error)
+    // Don't throw - this is a secondary operation
+  }
+}
+
+// Remove from WeaponPaints database
+async function removeFromWeaponPaints(
+  steamId: string,
+  item: { weapon: string; itemType: string }
+) {
+  try {
+    const isKnife = item.itemType === 'knife'
+
+    if (isKnife) {
+      // Delete knife entries for both teams
+      await prisma.$executeRaw`
+        DELETE FROM wp_player_knife WHERE steamid = ${steamId}
+      `
+      // Also delete knife skins
+      const knifeDefIdx = knifeDefIndex[item.weapon] || 500
+      await prisma.$executeRaw`
+        DELETE FROM wp_player_skins
+        WHERE steamid = ${steamId} AND weapon_defindex = ${knifeDefIdx}
+      `
+    } else {
+      // Delete regular weapon skin
+      const weaponDefIdx = getWeaponDefIndex(item.weapon)
+      await prisma.$executeRaw`
+        DELETE FROM wp_player_skins
+        WHERE steamid = ${steamId} AND weapon_defindex = ${weaponDefIdx}
+      `
+    }
+
+    console.log(`[WeaponPaints] Removed ${item.weapon} for ${steamId}`)
+  } catch (error) {
+    console.error('[WeaponPaints] Remove error:', error)
+  }
+}
 
 // Equip an inventory item for CT, T, or both teams
 export async function POST(
@@ -141,6 +259,9 @@ export async function POST(
       },
     })
 
+    // Sync to WeaponPaints tables (for CS2 skinchanger)
+    await syncToWeaponPaints(steamId, item, team)
+
     return NextResponse.json({
       success: true,
       weapon: item.weapon,
@@ -206,6 +327,9 @@ export async function DELETE(
         equippedT: false,
       },
     })
+
+    // Remove from WeaponPaints tables
+    await removeFromWeaponPaints(steamId, item)
 
     return NextResponse.json({
       success: true,

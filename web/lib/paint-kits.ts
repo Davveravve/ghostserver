@@ -466,3 +466,27 @@ export function getPaintKit(weapon: string, skinName: string): number {
 export function getWeaponDefIndex(weaponName: string): number {
   return weaponDefIndex[weaponName] || 0
 }
+
+// Knife definition indexes (subset of weaponDefIndex for knife types)
+export const knifeDefIndex: Record<string, number> = {
+  'Bayonet': 500,
+  'Bowie Knife': 514,
+  'Butterfly Knife': 515,
+  'Classic Knife': 503,
+  'Falchion Knife': 512,
+  'Flip Knife': 505,
+  'Gut Knife': 506,
+  'Huntsman Knife': 509,
+  'Karambit': 507,
+  'M9 Bayonet': 508,
+  'Navaja Knife': 520,
+  'Nomad Knife': 521,
+  'Paracord Knife': 517,
+  'Shadow Daggers': 516,
+  'Skeleton Knife': 525,
+  'Stiletto Knife': 522,
+  'Survival Knife': 518,
+  'Talon Knife': 523,
+  'Ursus Knife': 519,
+  'Kukri Knife': 526,
+}
