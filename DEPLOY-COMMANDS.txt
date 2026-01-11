@@ -83,6 +83,20 @@ Logga in på Namecheap och ändra:
 
 
 ===============================================
+PLUGIN UPPDATERING (efter deploy)
+===============================================
+
+1. Kompilera pluginet lokalt (Visual Studio/dotnet build)
+2. Kopiera GhostSouls.dll till servern:
+
+scp plugin/GhostSouls/bin/Debug/net8.0/GhostSouls.dll root@46.224.197.229:/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSouls/
+
+3. Ladda om pluginet i spelet:
+   screen -r cs2
+   css_plugins reload GhostSouls
+
+
+===============================================
 VANLIGA KOMMANDON
 ===============================================
 
