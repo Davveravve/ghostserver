@@ -31,12 +31,24 @@ const wearLabels: Record<Wear, string> = {
   BS: 'Battle-Scarred',
 }
 
-// Weapons that can be equipped on both CT and T side
-const BOTH_SIDES_WEAPONS = [
-  'Desert Eagle', 'R8 Revolver', 'CZ75-Auto', 'Zeus x27',
-  'Nova', 'XM1014', 'MAG-7', 'Sawed-Off', 'M249', 'Negev',
-  'MP9', 'MAC-10', 'PP-Bizon', 'MP7', 'UMP-45', 'P90', 'MP5-SD'
+// T-only weapons
+const T_ONLY_WEAPONS = [
+  'AK-47', 'Glock-18', 'Galil AR', 'SG 553', 'Tec-9', 'MAC-10', 'Sawed-Off', 'G3SG1'
 ]
+
+// CT-only weapons
+const CT_ONLY_WEAPONS = [
+  'M4A4', 'M4A1-S', 'USP-S', 'P2000', 'FAMAS', 'AUG', 'Five-SeveN', 'MP9', 'MAG-7', 'SCAR-20'
+]
+
+// Function to get weapon team restriction
+function getWeaponTeam(weapon: string | undefined, itemType: string): 'ct' | 't' | 'both' {
+  if (itemType === 'knife' || itemType === 'gloves') return 'both'
+  if (!weapon) return 'both'
+  if (T_ONLY_WEAPONS.includes(weapon)) return 't'
+  if (CT_ONLY_WEAPONS.includes(weapon)) return 'ct'
+  return 'both' // AWP, Deagle, P250, etc.
+}
 
 export function ItemModal({ inventoryItem, isOpen, onClose, onDelete, onEquip, onUnequip }: ItemModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -210,45 +222,62 @@ export function ItemModal({ inventoryItem, isOpen, onClose, onDelete, onEquip, o
                         </Button>
                       ) : (
                         <>
-                          {(isKnifeOrGloves || BOTH_SIDES_WEAPONS.includes(item.weapon || '')) ? (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
+                          {(() => {
+                            const weaponTeam = getWeaponTeam(item.weapon, item.type)
+
+                            if (weaponTeam === 'both') {
+                              // Both sides weapon - show CT/T/Both options
+                              return (
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                      variant="secondary"
+                                      className="flex items-center justify-center gap-2 border-blue-500/50 hover:bg-blue-500/20"
+                                      onClick={() => handleEquip('ct')}
+                                      disabled={isEquipping}
+                                    >
+                                      <span className="text-blue-400 font-bold">CT</span> Equip
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      className="flex items-center justify-center gap-2 border-orange-500/50 hover:bg-orange-500/20"
+                                      onClick={() => handleEquip('t')}
+                                      disabled={isEquipping}
+                                    >
+                                      <span className="text-orange-400 font-bold">T</span> Equip
+                                    </Button>
+                                  </div>
+                                  <Button
+                                    variant="primary"
+                                    className="w-full"
+                                    onClick={() => handleEquip('both')}
+                                    disabled={isEquipping}
+                                  >
+                                    {isEquipping ? 'Equipping...' : 'Equip Both Sides'}
+                                  </Button>
+                                </div>
+                              )
+                            } else {
+                              // Single-side weapon - just show Equip button
+                              const teamColor = weaponTeam === 'ct' ? 'blue' : 'orange'
+                              const teamLabel = weaponTeam === 'ct' ? 'CT' : 'T'
+                              return (
                                 <Button
-                                  variant="secondary"
-                                  className="flex items-center justify-center gap-2 border-blue-500/50 hover:bg-blue-500/20"
-                                  onClick={() => handleEquip('ct')}
+                                  variant="primary"
+                                  className={`w-full border-${teamColor}-500/50`}
+                                  onClick={() => handleEquip(weaponTeam)}
                                   disabled={isEquipping}
                                 >
-                                  <span className="text-blue-400 font-bold">CT</span> Equip
+                                  {isEquipping ? 'Equipping...' : (
+                                    <>
+                                      <span className={`text-${teamColor}-400 font-bold mr-2`}>{teamLabel}</span>
+                                      Equip
+                                    </>
+                                  )}
                                 </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="flex items-center justify-center gap-2 border-yellow-500/50 hover:bg-yellow-500/20"
-                                  onClick={() => handleEquip('t')}
-                                  disabled={isEquipping}
-                                >
-                                  <span className="text-yellow-400 font-bold">T</span> Equip
-                                </Button>
-                              </div>
-                              <Button
-                                variant="primary"
-                                className="w-full"
-                                onClick={() => handleEquip('both')}
-                                disabled={isEquipping}
-                              >
-                                {isEquipping ? 'Equipping...' : 'Equip Both Sides'}
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="primary"
-                              className="w-full"
-                              onClick={() => handleEquip('both')}
-                              disabled={isEquipping}
-                            >
-                              {isEquipping ? 'Equipping...' : 'Equip'}
-                            </Button>
-                          )}
+                              )
+                            }
+                          })()}
                         </>
                       )}
                       {onDelete && (

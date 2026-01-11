@@ -30,6 +30,25 @@ const wearColors: Record<Wear, { text: string; bg: string; border: string }> = {
   BS: { text: 'text-red-400', bg: 'bg-red-400', border: 'border-red-400' },
 }
 
+// T-only weapons
+const T_ONLY_WEAPONS = [
+  'AK-47', 'Glock-18', 'Galil AR', 'SG 553', 'Tec-9', 'MAC-10', 'Sawed-Off', 'G3SG1'
+]
+
+// CT-only weapons
+const CT_ONLY_WEAPONS = [
+  'M4A4', 'M4A1-S', 'USP-S', 'P2000', 'FAMAS', 'AUG', 'Five-SeveN', 'MP9', 'MAG-7', 'SCAR-20'
+]
+
+// Function to get weapon team restriction
+function getWeaponTeam(weapon: string | undefined, itemType: string): 'ct' | 't' | 'both' {
+  if (itemType === 'knife' || itemType === 'gloves') return 'both'
+  if (!weapon) return 'both'
+  if (T_ONLY_WEAPONS.includes(weapon)) return 't'
+  if (CT_ONLY_WEAPONS.includes(weapon)) return 'ct'
+  return 'both'
+}
+
 export function ItemCard({
   item,
   inventoryItem,
@@ -109,26 +128,49 @@ export function ItemCard({
         </button>
       )}
 
-      {/* Equipped badge - show CT/T/Both */}
+      {/* Equipped badge - show CT/T/Both based on weapon type */}
       {showEquipped && isEquipped && (
         <div className="absolute top-1.5 right-1.5 z-10 flex gap-0.5">
-          {equippedCt && equippedT ? (
-            <span className="px-1 py-0.5 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[8px] font-semibold">
-              CT+T
-            </span>
-          ) : equippedCt ? (
-            <span className="px-1 py-0.5 bg-blue-500/20 border border-blue-500/50 rounded text-blue-400 text-[8px] font-semibold">
-              CT
-            </span>
-          ) : equippedT ? (
-            <span className="px-1 py-0.5 bg-orange-500/20 border border-orange-500/50 rounded text-orange-400 text-[8px] font-semibold">
-              T
-            </span>
-          ) : (
-            <span className="px-1 py-0.5 bg-green-500/20 border border-green-500/50 rounded text-green-400 text-[8px] font-semibold">
-              EQ
-            </span>
-          )}
+          {(() => {
+            const weaponTeam = getWeaponTeam(item.weapon, item.type)
+
+            // For single-side weapons, just show EQ (the team is implicit)
+            if (weaponTeam === 'ct' || weaponTeam === 't') {
+              const teamColor = weaponTeam === 'ct' ? 'blue' : 'orange'
+              return (
+                <span className={`px-1 py-0.5 bg-${teamColor}-500/20 border border-${teamColor}-500/50 rounded text-${teamColor}-400 text-[8px] font-semibold`}>
+                  EQ
+                </span>
+              )
+            }
+
+            // For both-sides weapons, show which teams it's equipped for
+            if (equippedCt && equippedT) {
+              return (
+                <span className="px-1 py-0.5 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[8px] font-semibold">
+                  CT+T
+                </span>
+              )
+            } else if (equippedCt) {
+              return (
+                <span className="px-1 py-0.5 bg-blue-500/20 border border-blue-500/50 rounded text-blue-400 text-[8px] font-semibold">
+                  CT
+                </span>
+              )
+            } else if (equippedT) {
+              return (
+                <span className="px-1 py-0.5 bg-orange-500/20 border border-orange-500/50 rounded text-orange-400 text-[8px] font-semibold">
+                  T
+                </span>
+              )
+            } else {
+              return (
+                <span className="px-1 py-0.5 bg-green-500/20 border border-green-500/50 rounded text-green-400 text-[8px] font-semibold">
+                  EQ
+                </span>
+              )
+            }
+          })()}
         </div>
       )}
 
