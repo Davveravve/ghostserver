@@ -30,6 +30,22 @@ interface PluginSetting {
   description: string | null
 }
 
+const DEFAULT_COLORS = [
+  { id: 'red', name: 'Red', hex: '#ff4444' },
+  { id: 'darkred', name: 'Dark Red', hex: '#aa0000' },
+  { id: 'orange', name: 'Orange', hex: '#ff9944' },
+  { id: 'yellow', name: 'Yellow', hex: '#ffff44' },
+  { id: 'gold', name: 'Gold', hex: '#ffd700' },
+  { id: 'green', name: 'Green', hex: '#44ff44' },
+  { id: 'lime', name: 'Lime', hex: '#00ff00' },
+  { id: 'blue', name: 'Blue', hex: '#4444ff' },
+  { id: 'lightblue', name: 'Light Blue', hex: '#44aaff' },
+  { id: 'purple', name: 'Purple', hex: '#a855f7' },
+  { id: 'magenta', name: 'Magenta', hex: '#ff44ff' },
+  { id: 'grey', name: 'Grey', hex: '#888888' },
+  { id: 'white', name: 'White', hex: '#ffffff' },
+]
+
 const DEFAULT_SETTINGS = [
   { key: 'announcements.enabled', value: 'true', category: 'announcements', description: 'Enable announcement rotation' },
   { key: 'announcements.interval', value: '120', category: 'announcements', description: 'Seconds between announcements' },
@@ -45,7 +61,7 @@ const DEFAULT_SETTINGS = [
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'announcements' | 'settings' | 'maps'>('announcements')
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [colors, setColors] = useState<ChatColor[]>([])
+  const [colors, setColors] = useState<ChatColor[]>(DEFAULT_COLORS)
   const [settings, setSettings] = useState<Record<string, PluginSetting[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
@@ -306,17 +322,23 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Prefix Color</label>
-                  <select
-                    value={newAnnouncement.prefixColor}
-                    onChange={e => setNewAnnouncement({ ...newAnnouncement, prefixColor: e.target.value })}
-                    className="w-full bg-ghost-bg border border-white/10 rounded-lg px-4 py-2 text-white"
-                  >
-                    {colors.map(color => (
-                      <option key={color.id} value={color.id} style={{ color: color.hex }}>
-                        {color.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select
+                      value={newAnnouncement.prefixColor}
+                      onChange={e => setNewAnnouncement({ ...newAnnouncement, prefixColor: e.target.value })}
+                      className="flex-1 bg-ghost-bg border border-white/10 rounded-lg px-4 py-2 text-white"
+                    >
+                      {colors.map(color => (
+                        <option key={color.id} value={color.id}>
+                          {color.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div
+                      className="w-10 rounded-lg border border-white/10"
+                      style={{ backgroundColor: colors.find(c => c.id === newAnnouncement.prefixColor)?.hex || '#a855f7' }}
+                    />
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1">Message</label>
@@ -330,17 +352,23 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Message Color</label>
-                  <select
-                    value={newAnnouncement.color}
-                    onChange={e => setNewAnnouncement({ ...newAnnouncement, color: e.target.value })}
-                    className="w-full bg-ghost-bg border border-white/10 rounded-lg px-4 py-2 text-white"
-                  >
-                    {colors.map(color => (
-                      <option key={color.id} value={color.id} style={{ color: color.hex }}>
-                        {color.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select
+                      value={newAnnouncement.color}
+                      onChange={e => setNewAnnouncement({ ...newAnnouncement, color: e.target.value })}
+                      className="flex-1 bg-ghost-bg border border-white/10 rounded-lg px-4 py-2 text-white"
+                    >
+                      {colors.map(color => (
+                        <option key={color.id} value={color.id}>
+                          {color.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div
+                      className="w-10 rounded-lg border border-white/10"
+                      style={{ backgroundColor: colors.find(c => c.id === newAnnouncement.color)?.hex || '#ffffff' }}
+                    />
+                  </div>
                 </div>
                 <div className="flex items-end">
                   <Button onClick={createAnnouncement} className="w-full">
