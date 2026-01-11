@@ -15,7 +15,6 @@ const wearColors: Record<string, string> = {
   BS: 'text-red-400 bg-red-400',
 }
 
-
 async function getStats() {
   try {
     const [playerCount, casesOpened, soulsData, recentDrops] = await Promise.all([
@@ -53,8 +52,53 @@ async function getStats() {
   }
 }
 
+async function getActiveGiveaways() {
+  try {
+    const giveaways = await prisma.giveaway.findMany({
+      where: { status: 'active' },
+      orderBy: { endsAt: 'asc' },
+      take: 3,
+      include: { _count: { select: { entries: true } } },
+    })
+    return giveaways.map(g => ({
+      id: g.id,
+      title: g.title,
+      prizeType: g.prizeType,
+      prizeSouls: g.prizeSouls,
+      prizeCustom: g.prizeCustom,
+      giveawayType: g.giveawayType,
+      endsAt: g.endsAt.toISOString(),
+      entriesCount: g._count.entries,
+    }))
+  } catch {
+    return []
+  }
+}
+
+async function getLatestNews() {
+  try {
+    const news = await prisma.news.findMany({
+      where: { isPublished: true },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      take: 3,
+    })
+    return news.map(n => ({
+      id: n.id,
+      title: n.title,
+      category: n.category,
+      createdAt: n.createdAt.toISOString(),
+    }))
+  } catch {
+    return []
+  }
+}
+
 export default async function HomePage() {
-  const stats = await getStats()
+  const [stats, giveaways, news] = await Promise.all([
+    getStats(),
+    getActiveGiveaways(),
+    getLatestNews(),
+  ])
 
   return (
     <div>
@@ -64,14 +108,14 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-accent-primary/10 via-transparent to-transparent" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent-primary/20 rounded-full blur-[120px]" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
           <div className="text-center max-w-3xl mx-auto">
             <div className="flex flex-col items-center mb-8">
               <Image
                 src="/logo.png"
                 alt="Ghost Servers"
-                width={220}
-                height={220}
+                width={200}
+                height={200}
                 className="rounded-2xl mb-4"
               />
               <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-white">
@@ -99,8 +143,96 @@ export default async function HomePage() {
             </div>
           </div>
 
+          {/* Giveaways & News Row */}
+          {(giveaways.length > 0 || news.length > 0) && (
+            <div className="mt-12 grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {/* Active Giveaways */}
+              {giveaways.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-heading text-sm font-bold text-gray-400 uppercase tracking-wider">
+                      Active Giveaways
+                    </h3>
+                    <Link href="/giveaways" className="text-accent-primary text-xs hover:underline">
+                      View All
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {giveaways.map((g) => (
+                      <Link key={g.id} href="/giveaways">
+                        <div className="flex items-center justify-between p-3 bg-ghost-card/50 border border-white/5 rounded-lg hover:border-accent-primary/30 transition-colors">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-accent-primary/20 flex items-center justify-center flex-shrink-0">
+                              <svg className="w-4 h-4 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 110-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 100-5C13 2 12 7 12 7z"/>
+                              </svg>
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm truncate">{g.title}</div>
+                              <div className="text-xs text-accent-primary">
+                                {g.prizeType === 'souls' && g.prizeSouls ? `${g.prizeSouls.toLocaleString()} Souls` : g.prizeCustom || 'Prize'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-2">
+                            <div className="text-xs text-gray-500">{g.entriesCount} entries</div>
+                            <div className="text-xs text-green-400">{formatTimeLeft(g.endsAt)}</div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Latest News */}
+              {news.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-heading text-sm font-bold text-gray-400 uppercase tracking-wider">
+                      Latest News
+                    </h3>
+                    <Link href="/news" className="text-accent-primary text-xs hover:underline">
+                      View All
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {news.map((n) => (
+                      <Link key={n.id} href="/news">
+                        <div className="flex items-center justify-between p-3 bg-ghost-card/50 border border-white/5 rounded-lg hover:border-accent-primary/30 transition-colors">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                              <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                              </svg>
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm truncate">{n.title}</div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(n.createdAt).toLocaleDateString('sv-SE', { month: 'short', day: 'numeric' })}
+                              </div>
+                            </div>
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                            n.category === 'update' ? 'bg-green-500/20 text-green-400' :
+                            n.category === 'event' ? 'bg-purple-500/20 text-purple-400' :
+                            n.category === 'maintenance' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          }`}>
+                            {n.category}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Stats */}
-          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard label="Total Players" value={stats.totalPlayers.toLocaleString()} />
             <StatCard label="Online Now" value={stats.onlinePlayers.toString()} highlight />
             <StatCard label="Cases Opened" value={stats.casesOpened.toLocaleString()} />
@@ -238,4 +370,19 @@ function formatSouls(num: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
   if (num >= 1000) return `${(num / 1000).toFixed(0)}K`
   return num.toString()
+}
+
+function formatTimeLeft(endsAt: string): string {
+  const end = new Date(endsAt).getTime()
+  const now = Date.now()
+  const diff = end - now
+
+  if (diff <= 0) return 'Ended'
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+
+  if (days > 0) return `${days}d left`
+  if (hours > 0) return `${hours}h left`
+  return 'Soon'
 }

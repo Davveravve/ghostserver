@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface NewsItem {
   id: string
@@ -21,10 +22,13 @@ const categoryStyles: Record<string, { bg: string; text: string; label: string }
   maintenance: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Maintenance' },
 }
 
+const ITEMS_PER_PAGE = 10
+
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE)
 
   useEffect(() => {
     loadNews()
@@ -56,6 +60,9 @@ export default function NewsPage() {
     return categoryStyles[category] || categoryStyles.announcement
   }
 
+  const displayedNews = news.slice(0, displayCount)
+  const hasMore = news.length > displayCount
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-ghost-bg pt-24 pb-12">
@@ -68,7 +75,7 @@ export default function NewsPage() {
 
   return (
     <div className="min-h-screen bg-ghost-bg pt-24 pb-12">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 max-w-3xl">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -84,47 +91,85 @@ export default function NewsPage() {
           </p>
         </motion.div>
 
-        {/* News Grid */}
+        {/* News List - Stacked */}
         {news.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {news.map((item, index) => {
+          <div className="space-y-4">
+            {displayedNews.map((item, index) => {
               const style = getCategoryStyle(item.category)
               return (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03 }}
                 >
                   <Card
-                    className="h-full cursor-pointer hover:border-accent-primary/40 transition-colors"
+                    className="cursor-pointer hover:border-accent-primary/40 transition-all hover:bg-white/[0.02]"
                     onClick={() => setSelectedNews(item)}
                   >
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        {item.isPinned && (
-                          <span className="px-2 py-0.5 text-xs rounded-full bg-accent-primary/20 text-accent-primary">
-                            Pinned
-                          </span>
-                        )}
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${style.bg} ${style.text}`}>
-                          {style.label}
-                        </span>
-                      </div>
-                      <h3 className="font-heading text-lg font-bold mb-2">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm text-gray-400 line-clamp-3 mb-4">
-                        {item.excerpt || item.content.slice(0, 150)}
-                      </p>
-                      <div className="text-xs text-gray-500">
-                        {formatDate(item.createdAt)}
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        {/* Date column */}
+                        <div className="hidden sm:block text-center min-w-[60px]">
+                          <div className="text-2xl font-bold text-accent-primary">
+                            {new Date(item.createdAt).getDate()}
+                          </div>
+                          <div className="text-xs text-gray-500 uppercase">
+                            {new Date(item.createdAt).toLocaleDateString('sv-SE', { month: 'short' })}
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            {item.isPinned && (
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-accent-primary/20 text-accent-primary">
+                                Pinned
+                              </span>
+                            )}
+                            <span className={`px-2 py-0.5 text-xs rounded-full ${style.bg} ${style.text}`}>
+                              {style.label}
+                            </span>
+                            <span className="text-xs text-gray-500 sm:hidden">
+                              {formatDate(item.createdAt)}
+                            </span>
+                          </div>
+                          <h3 className="font-heading text-lg font-bold mb-1 truncate">
+                            {item.title}
+                          </h3>
+                          <p className="text-sm text-gray-400 line-clamp-2">
+                            {item.excerpt || item.content.slice(0, 150)}
+                          </p>
+                        </div>
+
+                        {/* Arrow */}
+                        <div className="text-gray-500 self-center">
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
               )
             })}
+
+            {/* Load More Button */}
+            {hasMore && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center pt-6"
+              >
+                <Button
+                  variant="secondary"
+                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_PAGE)}
+                >
+                  Load More ({news.length - displayCount} remaining)
+                </Button>
+              </motion.div>
+            )}
           </div>
         ) : (
           <motion.div

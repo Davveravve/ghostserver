@@ -147,7 +147,13 @@ export default function GiveawaysPage() {
 
         {/* Active Giveaways */}
         {activeGiveaways.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+          <div className={`grid gap-6 mb-16 ${
+            activeGiveaways.length === 1
+              ? 'max-w-md mx-auto'
+              : activeGiveaways.length === 2
+                ? 'md:grid-cols-2 max-w-3xl mx-auto'
+                : 'md:grid-cols-2 lg:grid-cols-3'
+          }`}>
             {activeGiveaways.map((g, index) => (
               <motion.div
                 key={g.id}
@@ -278,7 +284,13 @@ export default function GiveawaysPage() {
             transition={{ delay: 0.3 }}
           >
             <h2 className="font-heading text-2xl font-bold mb-6">Recent Winners</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${
+              endedGiveaways.length === 1
+                ? 'max-w-md mx-auto'
+                : endedGiveaways.length === 2
+                  ? 'md:grid-cols-2 max-w-3xl mx-auto'
+                  : 'md:grid-cols-2 lg:grid-cols-3'
+            }`}>
               {endedGiveaways.map((g) => (
                 <Card key={g.id} className="opacity-75">
                   <CardContent className="p-4">
