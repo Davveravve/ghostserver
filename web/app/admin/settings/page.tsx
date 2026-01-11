@@ -216,6 +216,57 @@ export default function SettingsPage() {
       {/* Announcements Tab */}
       {activeTab === 'announcements' && (
         <div className="space-y-6">
+          {/* Announcement Settings */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="font-heading text-xl font-bold mb-4">Announcement Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-3 bg-ghost-bg rounded-lg">
+                  <div>
+                    <div className="font-medium">Enabled</div>
+                    <div className="text-sm text-gray-400">Show announcements in-game</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const current = Object.values(settings).flat().find(s => s.key === 'announcements.enabled')
+                      updateSetting('announcements.enabled', current?.value === 'true' ? 'false' : 'true')
+                    }}
+                    className={`px-4 py-1.5 rounded-lg font-medium ${
+                      Object.values(settings).flat().find(s => s.key === 'announcements.enabled')?.value === 'true'
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}
+                  >
+                    {Object.values(settings).flat().find(s => s.key === 'announcements.enabled')?.value === 'true' ? 'On' : 'Off'}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-ghost-bg rounded-lg">
+                  <div>
+                    <div className="font-medium">Interval (seconds)</div>
+                    <div className="text-sm text-gray-400">Time between messages</div>
+                  </div>
+                  <input
+                    type="number"
+                    min="30"
+                    max="600"
+                    value={Object.values(settings).flat().find(s => s.key === 'announcements.interval')?.value || '120'}
+                    onChange={e => updateSetting('announcements.interval', e.target.value)}
+                    className="w-24 bg-ghost-card border border-white/10 rounded px-3 py-1.5 text-white text-center"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-ghost-bg rounded-lg">
+                  <div>
+                    <div className="font-medium">Active Messages</div>
+                    <div className="text-sm text-gray-400">Currently rotating</div>
+                  </div>
+                  <span className="text-2xl font-bold text-accent-primary">
+                    {announcements.filter(a => a.isActive).length}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Create new announcement */}
           <Card>
             <CardContent className="p-6">

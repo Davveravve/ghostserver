@@ -36,9 +36,12 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
     private int _clutchVsCount = 0;
     private CsTeam _clutchTeam = CsTeam.None;
 
-    // Sponsor/Ad rotation
-    private int _currentAdIndex = 0;
-    private DateTime _lastAdTime = DateTime.MinValue;
+    // Announcement rotation (fetched from API)
+    private int _currentAnnouncementIndex = 0;
+    private List<AnnouncementData> _announcements = new();
+    private float _announcementInterval = 120f; // Default 2 minutes
+    private bool _announcementsEnabled = true;
+    private DateTime _lastAnnouncementFetch = DateTime.MinValue;
 
     public override void Load(bool hotReload)
     {
@@ -57,11 +60,14 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         AddCommandListener("say", OnPlayerChat);
         AddCommandListener("say_team", OnPlayerChatTeam);
 
-        // Start ad rotation timer
-        if (Config.Sponsors.Enabled && Config.Sponsors.Ads.Count > 0)
-        {
-            AddTimer(Config.Sponsors.IntervalSeconds, ShowNextAd, TimerFlags.REPEAT);
-        }
+        // Fetch announcements from API and start rotation
+        Task.Run(async () => await FetchAnnouncements());
+
+        // Start announcement rotation timer (checks every 10 seconds, shows based on interval)
+        AddTimer(10f, CheckAndShowAnnouncement, TimerFlags.REPEAT);
+
+        // Refresh announcements from API every 5 minutes
+        AddTimer(300f, () => Task.Run(async () => await FetchAnnouncements()), TimerFlags.REPEAT);
 
         // Periodic sync timer (every 5 minutes)
         AddTimer(300f, SyncAllPlayers, TimerFlags.REPEAT);
@@ -822,34 +828,133 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
     #endregion
 
-    #region Sponsor/Ad System
+    #region Announcement System (API-driven)
 
-    private void ShowNextAd()
+    private DateTime _lastAnnouncementTime = DateTime.MinValue;
+
+    private void CheckAndShowAnnouncement()
     {
-        if (!Config.Sponsors.Enabled || Config.Sponsors.Ads.Count == 0) return;
+        if (!_announcementsEnabled || _announcements.Count == 0) return;
 
-        var ad = Config.Sponsors.Ads[_currentAdIndex];
-        _currentAdIndex = (_currentAdIndex + 1) % Config.Sponsors.Ads.Count;
+        // Check if enough time has passed
+        var elapsed = (DateTime.Now - _lastAnnouncementTime).TotalSeconds;
+        if (elapsed < _announcementInterval) return;
+
+        ShowNextAnnouncement();
+    }
+
+    private void ShowNextAnnouncement()
+    {
+        if (_announcements.Count == 0) return;
+
+        var announcement = _announcements[_currentAnnouncementIndex];
+        _currentAnnouncementIndex = (_currentAnnouncementIndex + 1) % _announcements.Count;
+        _lastAnnouncementTime = DateTime.Now;
+
+        var prefixColor = GetChatColor(announcement.PrefixColor);
+        var messageColor = GetChatColor(announcement.Color);
 
         // Show to all players
         foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot))
         {
-            switch (ad.Type)
+            switch (announcement.Type)
             {
                 case "chat":
-                    player.PrintToChat($" {ChatColors.Gold}[Sponsor] {ChatColors.Default}{ad.Message}");
+                    player.PrintToChat($" {prefixColor}{announcement.Prefix} {messageColor}{announcement.Message}");
                     break;
                 case "center":
-                    player.PrintToCenter(ad.Message);
+                    player.PrintToCenter(announcement.Message);
                     break;
                 case "html":
-                    // For future HTML panel support
-                    player.PrintToChat($" {ChatColors.Gold}[Sponsor] {ChatColors.Default}{ad.Message}");
+                    var html = $"<font color='{GetHexColor(announcement.PrefixColor)}'>{announcement.Prefix}</font> <font color='{GetHexColor(announcement.Color)}'>{announcement.Message}</font>";
+                    player.PrintToCenterHtml(html);
                     break;
             }
         }
 
-        _lastAdTime = DateTime.Now;
+        Logger.LogInformation($"[GhostSouls] Showed announcement: {announcement.Name}");
+    }
+
+    private async Task FetchAnnouncements()
+    {
+        try
+        {
+            var url = $"{Config.ApiUrl}/api/plugin/config";
+            Logger.LogInformation($"[GhostSouls] Fetching announcements from: {url}");
+
+            var response = await _httpClient.GetAsync(url);
+
+            // Handle redirect
+            if ((int)response.StatusCode >= 300 && (int)response.StatusCode < 400)
+            {
+                var redirectUrl = response.Headers.Location?.ToString();
+                if (!string.IsNullOrEmpty(redirectUrl))
+                {
+                    response = await _httpClient.GetAsync(redirectUrl);
+                }
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.LogWarning($"[GhostSouls] Failed to fetch announcements: {response.StatusCode}");
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var config = JsonSerializer.Deserialize<PluginConfigResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (config == null) return;
+
+            // Update announcements
+            _announcements = config.Announcements ?? new List<AnnouncementData>();
+
+            // Update settings
+            if (config.Settings != null)
+            {
+                if (config.Settings.TryGetValue("announcements.enabled", out var enabled))
+                {
+                    _announcementsEnabled = enabled.ToLower() == "true";
+                }
+                if (config.Settings.TryGetValue("announcements.interval", out var interval))
+                {
+                    if (float.TryParse(interval, out var intervalFloat))
+                    {
+                        _announcementInterval = intervalFloat;
+                    }
+                }
+            }
+
+            _lastAnnouncementFetch = DateTime.Now;
+            Logger.LogInformation($"[GhostSouls] Loaded {_announcements.Count} announcements, interval: {_announcementInterval}s, enabled: {_announcementsEnabled}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"[GhostSouls] FetchAnnouncements error: {ex.Message}");
+        }
+    }
+
+    private string GetHexColor(string colorName)
+    {
+        return colorName.ToLower() switch
+        {
+            "red" => "#ff4444",
+            "darkred" => "#aa0000",
+            "orange" => "#ff9944",
+            "yellow" => "#ffff44",
+            "gold" => "#ffd700",
+            "green" => "#44ff44",
+            "lime" => "#00ff00",
+            "blue" => "#4444ff",
+            "lightblue" => "#44aaff",
+            "purple" => "#a855f7",
+            "magenta" => "#ff44ff",
+            "grey" => "#888888",
+            "white" => "#ffffff",
+            _ => "#ffffff"
+        };
     }
 
     private void GiveSoulsPerMinute()

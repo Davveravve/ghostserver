@@ -66,3 +66,36 @@ public class RareDropAnnouncement
     public string SkinName { get; set; } = "";
     public string? DopplerPhase { get; set; }
 }
+
+/// <summary>
+/// Announcement data from API (rotating chat messages)
+/// </summary>
+public class AnnouncementData
+{
+    public string Name { get; set; } = "";
+    public string Message { get; set; } = "";
+    public string Type { get; set; } = "chat"; // chat, center, html
+    public string Color { get; set; } = "white";
+    public string Prefix { get; set; } = "[Ghost]";
+    public string PrefixColor { get; set; } = "purple";
+}
+
+/// <summary>
+/// Plugin config response from API
+/// </summary>
+public class PluginConfigResponse
+{
+    public List<AnnouncementData>? Announcements { get; set; }
+    public Dictionary<string, string>? Settings { get; set; }
+    public Dictionary<string, List<MapInfo>>? Maps { get; set; }
+}
+
+/// <summary>
+/// Map info from API
+/// </summary>
+public class MapInfo
+{
+    public string WorkshopId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public int Tier { get; set; } = 1;
+}
