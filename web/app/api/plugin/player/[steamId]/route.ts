@@ -45,7 +45,7 @@ export async function GET(
     const equippedSkins = player.inventory.map(item => ({
       weaponName: item.weapon,
       weaponDefIndex: getWeaponDefIndex(item.weapon),
-      paintKit: getPaintKit(item.skinName),
+      paintKit: getPaintKit(item.weapon, item.skinName),
       seed: Math.floor(Math.random() * 1000),
       wear: item.floatValue || 0.1,
       dopplerPhase: item.dopplerPhase,
