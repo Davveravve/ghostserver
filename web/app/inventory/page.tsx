@@ -36,6 +36,9 @@ interface ExtendedInventoryItem extends InventoryItem {
   rarity: Rarity
   estimatedPrice: number
   rawId: string // Original string ID for API calls
+  equippedCt: boolean
+  equippedT: boolean
+  itemType: string
 }
 
 // Konvertera API-data till InventoryItem format
@@ -63,6 +66,9 @@ function convertToInventoryItem(item: InventoryItemData): ExtendedInventoryItem 
     isFavorite: item.isFavorite,
     rarity: (item.rarity || 'common') as Rarity,
     estimatedPrice: item.estimatedPrice,
+    equippedCt: item.equippedCt,
+    equippedT: item.equippedT,
+    itemType: item.itemType,
   }
 }
 

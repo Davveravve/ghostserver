@@ -18,6 +18,8 @@ interface ItemCardProps {
   isSelectedForDelete?: boolean
   isSelectedForFavorite?: boolean
   bulkMode?: BulkMode
+  equippedCt?: boolean
+  equippedT?: boolean
 }
 
 const wearColors: Record<Wear, { text: string; bg: string; border: string }> = {
@@ -40,8 +42,10 @@ export function ItemCard({
   isSelectedForDelete,
   isSelectedForFavorite,
   bulkMode = 'none',
+  equippedCt,
+  equippedT,
 }: ItemCardProps) {
-  const isEquipped = inventoryItem?.is_equipped
+  const isEquipped = equippedCt || equippedT || inventoryItem?.is_equipped
   const colors = wearColors[item.wear]
   const isKnifeOrGloves = item.type === 'knife' || item.type === 'gloves'
   const rarityData = rarity ? rarityInfo[rarity] : null
@@ -105,12 +109,26 @@ export function ItemCard({
         </button>
       )}
 
-      {/* Equipped badge */}
+      {/* Equipped badge - show CT/T/Both */}
       {showEquipped && isEquipped && (
-        <div className="absolute top-1.5 right-1.5 z-10">
-          <span className="px-1 py-0.5 bg-green-500/20 border border-green-500/50 rounded text-green-400 text-[8px] font-semibold">
-            EQ
-          </span>
+        <div className="absolute top-1.5 right-1.5 z-10 flex gap-0.5">
+          {equippedCt && equippedT ? (
+            <span className="px-1 py-0.5 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[8px] font-semibold">
+              CT+T
+            </span>
+          ) : equippedCt ? (
+            <span className="px-1 py-0.5 bg-blue-500/20 border border-blue-500/50 rounded text-blue-400 text-[8px] font-semibold">
+              CT
+            </span>
+          ) : equippedT ? (
+            <span className="px-1 py-0.5 bg-orange-500/20 border border-orange-500/50 rounded text-orange-400 text-[8px] font-semibold">
+              T
+            </span>
+          ) : (
+            <span className="px-1 py-0.5 bg-green-500/20 border border-green-500/50 rounded text-green-400 text-[8px] font-semibold">
+              EQ
+            </span>
+          )}
         </div>
       )}
 

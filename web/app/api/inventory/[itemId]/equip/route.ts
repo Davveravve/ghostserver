@@ -54,28 +54,82 @@ export async function POST(
     const unequipCt = team === 'ct' || team === 'both'
     const unequipT = team === 't' || team === 'both'
 
+    // Check if this is a knife or gloves (they share slots within their type)
+    const isKnife = item.itemType === 'knife'
+    const isGloves = item.itemType === 'gloves'
+
     if (unequipCt) {
-      await prisma.inventoryItem.updateMany({
-        where: {
-          playerId: player.id,
-          weapon: item.weapon,
-          equippedCt: true,
-          id: { not: itemId },
-        },
-        data: { equippedCt: false },
-      })
+      if (isKnife) {
+        // Unequip ALL knives for CT
+        await prisma.inventoryItem.updateMany({
+          where: {
+            playerId: player.id,
+            itemType: 'knife',
+            equippedCt: true,
+            id: { not: itemId },
+          },
+          data: { equippedCt: false },
+        })
+      } else if (isGloves) {
+        // Unequip ALL gloves for CT
+        await prisma.inventoryItem.updateMany({
+          where: {
+            playerId: player.id,
+            itemType: 'gloves',
+            equippedCt: true,
+            id: { not: itemId },
+          },
+          data: { equippedCt: false },
+        })
+      } else {
+        // Unequip same weapon type for CT
+        await prisma.inventoryItem.updateMany({
+          where: {
+            playerId: player.id,
+            weapon: item.weapon,
+            equippedCt: true,
+            id: { not: itemId },
+          },
+          data: { equippedCt: false },
+        })
+      }
     }
 
     if (unequipT) {
-      await prisma.inventoryItem.updateMany({
-        where: {
-          playerId: player.id,
-          weapon: item.weapon,
-          equippedT: true,
-          id: { not: itemId },
-        },
-        data: { equippedT: false },
-      })
+      if (isKnife) {
+        // Unequip ALL knives for T
+        await prisma.inventoryItem.updateMany({
+          where: {
+            playerId: player.id,
+            itemType: 'knife',
+            equippedT: true,
+            id: { not: itemId },
+          },
+          data: { equippedT: false },
+        })
+      } else if (isGloves) {
+        // Unequip ALL gloves for T
+        await prisma.inventoryItem.updateMany({
+          where: {
+            playerId: player.id,
+            itemType: 'gloves',
+            equippedT: true,
+            id: { not: itemId },
+          },
+          data: { equippedT: false },
+        })
+      } else {
+        // Unequip same weapon type for T
+        await prisma.inventoryItem.updateMany({
+          where: {
+            playerId: player.id,
+            weapon: item.weapon,
+            equippedT: true,
+            id: { not: itemId },
+          },
+          data: { equippedT: false },
+        })
+      }
     }
 
     // Equip the item

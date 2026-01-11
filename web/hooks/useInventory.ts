@@ -132,7 +132,12 @@ export function useInventory(): UseInventoryReturn {
 
       const data = await response.json()
 
-      // Update local state - unequip same weapon from other items, then equip this one
+      // Find the equipped item to check if it's a knife/gloves
+      const equippedItem = items.find(i => i.id === itemId)
+      const isKnife = equippedItem?.itemType === 'knife'
+      const isGloves = equippedItem?.itemType === 'gloves'
+
+      // Update local state - unequip same weapon/slot from other items, then equip this one
       setItems(prev => prev.map(item => {
         if (item.id === itemId) {
           return {
@@ -141,8 +146,17 @@ export function useInventory(): UseInventoryReturn {
             equippedT: team === 't' || team === 'both',
           }
         }
-        // Unequip same weapon from other items
-        if (item.weapon === data.weapon && item.id !== itemId) {
+
+        // For knives: unequip ALL other knives
+        // For gloves: unequip ALL other gloves
+        // For weapons: unequip same weapon type
+        const shouldUnequip = isKnife
+          ? item.itemType === 'knife'
+          : isGloves
+            ? item.itemType === 'gloves'
+            : item.weapon === data.weapon
+
+        if (shouldUnequip && item.id !== itemId) {
           return {
             ...item,
             equippedCt: team === 'ct' || team === 'both' ? false : item.equippedCt,
@@ -154,7 +168,7 @@ export function useInventory(): UseInventoryReturn {
     } catch (err) {
       console.error('Failed to equip item:', err)
     }
-  }, [])
+  }, [items])
 
   const unequipItem = useCallback(async (itemId: string) => {
     try {

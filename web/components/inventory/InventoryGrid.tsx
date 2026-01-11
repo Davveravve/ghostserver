@@ -13,6 +13,9 @@ interface ExtendedInventoryItem extends InventoryItem {
   rarity?: Rarity
   estimatedPrice?: number
   rawId?: string
+  equippedCt?: boolean
+  equippedT?: boolean
+  itemType?: string
 }
 
 interface InventoryGridProps {
@@ -363,6 +366,8 @@ export function InventoryGrid({
               isSelectedForDelete={bulkMode === 'delete' && invItem.rawId ? selectedItems.has(invItem.rawId) : false}
               isSelectedForFavorite={bulkMode === 'favorite' && invItem.rawId ? selectedItems.has(invItem.rawId) : false}
               bulkMode={bulkMode}
+              equippedCt={invItem.equippedCt}
+              equippedT={invItem.equippedT}
             />
           ))}
         </div>
