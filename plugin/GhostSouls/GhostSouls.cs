@@ -19,7 +19,10 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
     public required GhostConfig Config { get; set; }
 
-    private readonly HttpClient _httpClient = new();
+    private readonly HttpClient _httpClient = new(new HttpClientHandler
+    {
+        AllowAutoRedirect = false // Prevent header stripping on redirects
+    });
     private readonly Dictionary<ulong, PlayerData> _playerCache = new();
     private readonly Dictionary<ulong, DateTime> _lastKillTime = new();
 
@@ -63,14 +66,31 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         // Periodic sync timer (every 5 minutes)
         AddTimer(300f, SyncAllPlayers, TimerFlags.REPEAT);
 
+        // Souls per minute timer (for surf/bhop servers)
+        if (Config.Souls.SoulsPerMinute > 0)
+        {
+            AddTimer(60f, GiveSoulsPerMinute, TimerFlags.REPEAT);
+        }
+
+        // HUD update timer (every 1 second)
+        AddTimer(1.0f, UpdateSoulsHud, TimerFlags.REPEAT);
+
+        // Skin refresh timer (every 10 seconds) - syncs equipped skins from website for instant updates
+        AddTimer(10f, RefreshAllPlayerSkins, TimerFlags.REPEAT);
+
         Logger.LogInformation("[GhostSouls] Plugin loaded successfully!");
     }
 
     public void OnConfigParsed(GhostConfig config)
     {
         Config = config;
-        _httpClient.BaseAddress = new Uri(config.ApiUrl);
+
+        // Clear and reconfigure headers
+        _httpClient.DefaultRequestHeaders.Clear();
         _httpClient.DefaultRequestHeaders.Add("X-API-Key", config.ApiKey);
+
+        Logger.LogInformation($"[GhostSouls] API configured: {config.ApiUrl}");
+        Logger.LogInformation($"[GhostSouls] API Key (first 10 chars): {(config.ApiKey.Length > 10 ? config.ApiKey.Substring(0, 10) : config.ApiKey)}...");
     }
 
     #region Player Events
@@ -175,8 +195,16 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
         var steamId = player.SteamID;
 
-        // Apply Ghost inventory skins after a short delay (to ensure weapons exist)
-        AddTimer(0.1f, () => ApplyPlayerSkins(player, steamId));
+        // Force weapon refresh after spawn to trigger WeaponPaints
+        // Give WeaponPaints time to initialize (1.5s delay)
+        AddTimer(1.5f, () =>
+        {
+            if (player.IsValid && player.PawnIsAlive)
+            {
+                Logger.LogInformation($"[GhostSouls] Triggering WeaponPaints refresh for {steamId}");
+                ForceWeaponRefresh(player);
+            }
+        });
 
         return HookResult.Continue;
     }
@@ -243,6 +271,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         {
             data.Souls += soulsEarned;
             data.TotalEarned += soulsEarned;
+            data.SessionEarned += soulsEarned; // Track for delta sync
             data.IsDirty = true;
 
             attacker.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Green}+{soulsEarned} {ChatColors.Default}soul{(soulsEarned > 1 ? "s" : "")}{bonusText}{multiplierText}");
@@ -291,6 +320,9 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         _isClutchSituation = false;
         _clutchPlayer = 0;
         _clutchVsCount = 0;
+
+        // Refresh skins from website at round start
+        RefreshAllPlayerSkins();
 
         return HookResult.Continue;
     }
@@ -359,6 +391,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
                         int soulsEarned = (int)Math.Ceiling(clutchBonus * multiplier);
                         data.Souls += soulsEarned;
                         data.TotalEarned += soulsEarned;
+                        data.SessionEarned += soulsEarned; // Track for delta sync
                         data.IsDirty = true;
                     }
 
@@ -548,45 +581,96 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         var pawn = player.PlayerPawn.Value;
         if (pawn.WeaponServices?.MyWeapons == null) return;
 
+        // Get player's current team
+        var playerTeam = player.Team;
+        var teamStr = playerTeam == CsTeam.CounterTerrorist ? "ct" : playerTeam == CsTeam.Terrorist ? "t" : "none";
+
+        Logger.LogInformation($"[GhostSouls] ApplyPlayerSkins for {steamId} - Team: {teamStr}, Skins: {data.EquippedSkins.Count}");
+
         foreach (var weaponHandle in pawn.WeaponServices.MyWeapons)
         {
             var weapon = weaponHandle.Value;
             if (weapon == null || !weapon.IsValid) continue;
 
             var weaponName = weapon.DesignerName;
+            var weaponDefIndex = weapon.AttributeManager.Item.ItemDefinitionIndex;
+            var isKnife = weaponName.Contains("knife") || weaponName.Contains("bayonet");
 
-            // Find equipped skin for this weapon
-            var equippedSkin = data.EquippedSkins.FirstOrDefault(s =>
-                s.WeaponDefIndex == weapon.AttributeManager.Item.ItemDefinitionIndex ||
-                IsMatchingWeapon(weaponName, s.WeaponName));
+            Logger.LogInformation($"[GhostSouls] Checking weapon: {weaponName} (DefIndex={weaponDefIndex}, IsKnife={isKnife})");
+
+            EquippedSkin? equippedSkin = null;
+
+            if (isKnife)
+            {
+                // For knives, find equipped knife skin that matches player's team
+                equippedSkin = data.EquippedSkins.FirstOrDefault(s =>
+                    s.IsKnife && IsTeamMatch(s.Team, playerTeam));
+            }
+            else
+            {
+                // For other weapons, match by weapon def index or name AND team
+                equippedSkin = data.EquippedSkins.FirstOrDefault(s =>
+                    !s.IsKnife && !s.IsGloves &&
+                    IsTeamMatch(s.Team, playerTeam) &&
+                    (s.WeaponDefIndex == weaponDefIndex || IsMatchingWeapon(weaponName, s.WeaponName)));
+            }
 
             if (equippedSkin != null)
             {
+                Logger.LogInformation($"[GhostSouls] Found matching skin: {equippedSkin.WeaponName} PK={equippedSkin.PaintKit} Team={equippedSkin.Team}");
                 ApplySkin(weapon, equippedSkin);
             }
             else
             {
+                Logger.LogInformation($"[GhostSouls] No matching skin for {weaponName}");
                 // Force default skin (remove Steam inventory skin)
                 ForceDefaultSkin(weapon);
             }
         }
     }
 
+    private bool IsTeamMatch(string skinTeam, CsTeam playerTeam)
+    {
+        if (skinTeam == "both") return true;
+        if (skinTeam == "ct" && playerTeam == CsTeam.CounterTerrorist) return true;
+        if (skinTeam == "t" && playerTeam == CsTeam.Terrorist) return true;
+        return false;
+    }
+
     private void ApplySkin(CBasePlayerWeapon weapon, EquippedSkin skin)
     {
         try
         {
+            // For knives, we need to change the weapon definition index FIRST
+            if (skin.IsKnife && skin.WeaponDefIndex > 0)
+            {
+                weapon.AttributeManager.Item.ItemDefinitionIndex = (ushort)skin.WeaponDefIndex;
+            }
+
+            // Set item IDs to enable fallback skins
             weapon.AttributeManager.Item.ItemID = 16384;
             weapon.AttributeManager.Item.ItemIDLow = 16384;
             weapon.AttributeManager.Item.ItemIDHigh = 0;
+            weapon.AttributeManager.Item.AccountID = 0;
+
+            // Set the skin properties
             weapon.FallbackPaintKit = skin.PaintKit;
             weapon.FallbackSeed = skin.Seed;
             weapon.FallbackWear = skin.Wear;
+            weapon.FallbackStatTrak = -1;
 
-            // Update on client
-            Utilities.SetStateChanged(weapon, "CBaseEntity", "m_nFallbackPaintKit");
-            Utilities.SetStateChanged(weapon, "CBaseEntity", "m_nFallbackSeed");
-            Utilities.SetStateChanged(weapon, "CBaseEntity", "m_flFallbackWear");
+            // Force network update - CS2 requires updating the entire attribute manager
+            Utilities.SetStateChanged(weapon, "CBaseEntity", "m_AttributeManager");
+            Utilities.SetStateChanged(weapon, "CBasePlayerWeapon", "m_nFallbackPaintKit");
+            Utilities.SetStateChanged(weapon, "CBasePlayerWeapon", "m_nFallbackSeed");
+            Utilities.SetStateChanged(weapon, "CBasePlayerWeapon", "m_flFallbackWear");
+
+            if (skin.IsKnife)
+            {
+                Utilities.SetStateChanged(weapon, "CBaseEntity", "m_iItemDefinitionIndex");
+            }
+
+            Logger.LogInformation($"[GhostSouls] Applied skin: {skin.WeaponName} PaintKit={skin.PaintKit} IsKnife={skin.IsKnife} DefIndex={skin.WeaponDefIndex}");
         }
         catch (Exception ex)
         {
@@ -616,19 +700,115 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         }
     }
 
+    /// <summary>
+    /// Forces a weapon refresh by stripping and re-giving weapons.
+    /// This triggers WeaponPaints to apply skins from the database.
+    /// </summary>
+    private void ForceWeaponRefresh(CCSPlayerController player)
+    {
+        if (!player.IsValid || player.PlayerPawn?.Value == null) return;
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn.WeaponServices?.MyWeapons == null) return;
+
+        try
+        {
+            // Collect current weapons
+            var weapons = new List<string>();
+            var activeWeapon = pawn.WeaponServices.ActiveWeapon?.Value?.DesignerName;
+
+            foreach (var weaponHandle in pawn.WeaponServices.MyWeapons)
+            {
+                var weapon = weaponHandle.Value;
+                if (weapon == null || !weapon.IsValid) continue;
+
+                var weaponName = weapon.DesignerName;
+                if (!string.IsNullOrEmpty(weaponName) && !weaponName.Contains("knife"))
+                {
+                    weapons.Add(weaponName);
+                }
+            }
+
+            // Strip weapons
+            player.RemoveWeapons();
+
+            // Give knife back (WeaponPaints will apply knife skin)
+            player.GiveNamedItem("weapon_knife");
+
+            // Give other weapons back
+            foreach (var weaponName in weapons)
+            {
+                player.GiveNamedItem(weaponName);
+            }
+
+            // Switch to active weapon if it was set
+            if (!string.IsNullOrEmpty(activeWeapon))
+            {
+                AddTimer(0.1f, () =>
+                {
+                    if (player.IsValid)
+                    {
+                        player.ExecuteClientCommand($"use {activeWeapon}");
+                    }
+                });
+            }
+
+            Logger.LogInformation($"[GhostSouls] Forced weapon refresh for {player.SteamID}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"[GhostSouls] ForceWeaponRefresh error: {ex.Message}");
+        }
+    }
+
     private bool IsMatchingWeapon(string designerName, string skinWeaponName)
     {
         // Map designer names to readable names
         var mapping = new Dictionary<string, string[]>
         {
+            // Pistols
+            { "weapon_deagle", new[] { "Desert Eagle" } },
+            { "weapon_elite", new[] { "Dual Berettas" } },
+            { "weapon_fiveseven", new[] { "Five-SeveN" } },
+            { "weapon_glock", new[] { "Glock-18" } },
+            { "weapon_hkp2000", new[] { "P2000" } },
+            { "weapon_usp_silencer", new[] { "USP-S" } },
+            { "weapon_cz75a", new[] { "CZ75-Auto" } },
+            { "weapon_revolver", new[] { "R8 Revolver" } },
+            { "weapon_p250", new[] { "P250" } },
+            { "weapon_tec9", new[] { "Tec-9" } },
+
+            // SMGs
+            { "weapon_mac10", new[] { "MAC-10" } },
+            { "weapon_mp5sd", new[] { "MP5-SD" } },
+            { "weapon_mp7", new[] { "MP7" } },
+            { "weapon_mp9", new[] { "MP9" } },
+            { "weapon_p90", new[] { "P90" } },
+            { "weapon_bizon", new[] { "PP-Bizon" } },
+            { "weapon_ump45", new[] { "UMP-45" } },
+
+            // Rifles
             { "weapon_ak47", new[] { "AK-47" } },
+            { "weapon_aug", new[] { "AUG" } },
+            { "weapon_famas", new[] { "FAMAS" } },
+            { "weapon_galilar", new[] { "Galil AR" } },
             { "weapon_m4a1", new[] { "M4A4" } },
             { "weapon_m4a1_silencer", new[] { "M4A1-S" } },
+            { "weapon_sg556", new[] { "SG 553" } },
+
+            // Snipers
             { "weapon_awp", new[] { "AWP" } },
-            { "weapon_deagle", new[] { "Desert Eagle" } },
-            { "weapon_usp_silencer", new[] { "USP-S" } },
-            { "weapon_glock", new[] { "Glock-18" } },
-            // Add more as needed
+            { "weapon_g3sg1", new[] { "G3SG1" } },
+            { "weapon_scar20", new[] { "SCAR-20" } },
+            { "weapon_ssg08", new[] { "SSG 08" } },
+
+            // Heavies
+            { "weapon_m249", new[] { "M249" } },
+            { "weapon_mag7", new[] { "MAG-7" } },
+            { "weapon_negev", new[] { "Negev" } },
+            { "weapon_nova", new[] { "Nova" } },
+            { "weapon_sawedoff", new[] { "Sawed-Off" } },
+            { "weapon_xm1014", new[] { "XM1014" } },
         };
 
         if (mapping.TryGetValue(designerName, out var names))
@@ -636,7 +816,8 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
             return names.Any(n => n.Equals(skinWeaponName, StringComparison.OrdinalIgnoreCase));
         }
 
-        return false;
+        // Also check if designer name contains the weapon name (for knives)
+        return designerName.Contains(skinWeaponName.ToLower().Replace(" ", "").Replace("-", ""));
     }
 
     #endregion
@@ -671,6 +852,47 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         _lastAdTime = DateTime.Now;
     }
 
+    private void GiveSoulsPerMinute()
+    {
+        var soulsPerMinute = Config.Souls.SoulsPerMinute;
+        if (soulsPerMinute <= 0) return;
+
+        foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot))
+        {
+            var steamId = player.SteamID;
+            if (_playerCache.TryGetValue(steamId, out var data))
+            {
+                var role = GetPlayerRole(steamId);
+                var settings = GetRoleSettings(role);
+                var earned = (int)(soulsPerMinute * settings.SoulsMultiplier);
+
+                data.Souls += earned;
+                data.TotalEarned += earned;
+                data.SessionEarned += earned; // Track for delta sync
+                data.IsDirty = true;
+
+                player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}+{ChatColors.Green}{earned} {ChatColors.Default}souls for playing!");
+            }
+        }
+    }
+
+    private void UpdateSoulsHud()
+    {
+        foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && p.PawnIsAlive))
+        {
+            var steamId = player.SteamID;
+            if (_playerCache.TryGetValue(steamId, out var data))
+            {
+                var soulsDisplay = data.Souls.ToString("N0");
+
+                // Simple HTML HUD that works in CS2
+                var html = $"<font color='#a855f7' class='fontSize-l'>{soulsDisplay}</font><br><font color='#888888' class='fontSize-m'>SOULS</font>";
+
+                player.PrintToCenterHtml(html);
+            }
+        }
+    }
+
     #endregion
 
     #region Commands
@@ -682,15 +904,35 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         if (player == null || !player.IsValid) return;
 
         var steamId = player.SteamID;
-        if (_playerCache.TryGetValue(steamId, out var data))
+
+        // Fetch fresh data from API first
+        Task.Run(async () =>
         {
-            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}You have {ChatColors.Green}{data.Souls:N0} {ChatColors.Default}souls.");
-            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Total earned: {ChatColors.Yellow}{data.TotalEarned:N0} {ChatColors.Default}souls.");
-        }
-        else
-        {
-            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Red}Could not load your data. Try reconnecting.");
-        }
+            try
+            {
+                await RefreshPlayerData(steamId);
+
+                Server.NextFrame(() =>
+                {
+                    if (player.IsValid && _playerCache.TryGetValue(steamId, out var data))
+                    {
+                        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}You have {ChatColors.Green}{data.Souls:N0} {ChatColors.Default}souls.");
+                        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Total earned: {ChatColors.Yellow}{data.TotalEarned:N0} {ChatColors.Default}souls.");
+                    }
+                });
+            }
+            catch
+            {
+                Server.NextFrame(() =>
+                {
+                    if (player.IsValid && _playerCache.TryGetValue(steamId, out var data))
+                    {
+                        // Fallback to cached data if API fails
+                        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}You have {ChatColors.Green}{data.Souls:N0} {ChatColors.Default}souls (cached).");
+                    }
+                });
+            }
+        });
     }
 
     [ConsoleCommand("css_inventory", "Open inventory (shows website link)")]
@@ -771,6 +1013,27 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         });
     }
 
+    [ConsoleCommand("css_skin", "Manually apply your equipped skins")]
+    [ConsoleCommand("css_skins", "Refresh your weapon skins")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnSkinCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+
+        if (!player.PawnIsAlive)
+        {
+            player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Red}You must be alive to apply skins!");
+            return;
+        }
+
+        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Refreshing skins...");
+
+        // Execute WeaponPaints refresh command
+        player.ExecuteClientCommandFromServer("css_wp");
+
+        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Green}Skins refreshed! Use !wp for menu.");
+    }
+
     [ConsoleCommand("css_elo", "Show your ELO and rank")]
     [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void OnEloCommand(CCSPlayerController? player, CommandInfo command)
@@ -819,7 +1082,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
     {
         if (player == null || !player.IsValid) return;
 
-        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Join our Discord: {ChatColors.Blue}discord.gg/ghostservers");
+        player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Default}Join our Discord: {ChatColors.Blue}discord.gg/aSDrPk6Y8q");
     }
 
     [ConsoleCommand("css_website", "Show website link")]
@@ -848,6 +1111,52 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         {
             player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Grey}Become ASCENDED at {Config.WebsiteUrl}/premium for 2x souls!");
         }
+    }
+
+    [ConsoleCommand("css_debug", "Show debug info about your player data")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnDebugCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+
+        var steamId = player.SteamID;
+
+        player.PrintToChat($" ");
+        player.PrintToChat($" {ChatColors.Purple}======== DEBUG INFO ========");
+        player.PrintToChat($" {ChatColors.Default}SteamID: {ChatColors.Green}{steamId}");
+
+        if (_playerCache.TryGetValue(steamId, out var data))
+        {
+            player.PrintToChat($" {ChatColors.Default}Souls: {ChatColors.Green}{data.Souls:N0} {ChatColors.Grey}(Session: +{data.SessionEarned})");
+            player.PrintToChat($" {ChatColors.Default}Total Earned: {ChatColors.Yellow}{data.TotalEarned:N0}");
+            player.PrintToChat($" {ChatColors.Default}ELO: {ChatColors.Green}{data.Elo} {ChatColors.Grey}(W:{data.Wins}/L:{data.Losses})");
+            player.PrintToChat($" {ChatColors.Default}Role: {ChatColors.Yellow}{data.Role} {ChatColors.Grey}| Premium: {data.PremiumTier}");
+            player.PrintToChat($" {ChatColors.Default}Dirty: {(data.IsDirty ? ChatColors.Red : ChatColors.Green)}{data.IsDirty}");
+            player.PrintToChat($" ");
+            player.PrintToChat($" {ChatColors.Gold}Equipped Skins ({data.EquippedSkins.Count}):");
+
+            if (data.EquippedSkins.Count == 0)
+            {
+                player.PrintToChat($" {ChatColors.Grey}  (none)");
+            }
+            else
+            {
+                foreach (var skin in data.EquippedSkins)
+                {
+                    var knifeTag = skin.IsKnife ? " [KNIFE]" : "";
+                    var glovesTag = skin.IsGloves ? " [GLOVES]" : "";
+                    player.PrintToChat($" {ChatColors.Default}  - {ChatColors.Green}{skin.WeaponName}{knifeTag}{glovesTag}");
+                    player.PrintToChat($"    {ChatColors.Grey}DefIdx={skin.WeaponDefIndex} PK={skin.PaintKit} Team={skin.Team}");
+                }
+            }
+        }
+        else
+        {
+            player.PrintToChat($" {ChatColors.Red}No cached data found!");
+        }
+
+        player.PrintToChat($" {ChatColors.Purple}============================");
+        player.PrintToChat($" ");
     }
 
     [ConsoleCommand("css_ghost", "Show Ghost Gaming info")]
@@ -965,7 +1274,24 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/plugin/player/{steamId}");
+            var url = $"{Config.ApiUrl}/api/plugin/player/{steamId}";
+            Logger.LogInformation($"[GhostSouls] Fetching: {url}");
+            Logger.LogInformation($"[GhostSouls] API Key present: {!string.IsNullOrEmpty(Config.ApiKey)}");
+
+            var response = await _httpClient.GetAsync(url);
+
+            // Handle redirect manually to preserve headers
+            if ((int)response.StatusCode >= 300 && (int)response.StatusCode < 400)
+            {
+                var redirectUrl = response.Headers.Location?.ToString();
+                if (!string.IsNullOrEmpty(redirectUrl))
+                {
+                    Logger.LogInformation($"[GhostSouls] Redirect to: {redirectUrl}");
+                    response = await _httpClient.GetAsync(redirectUrl);
+                }
+            }
+
+            Logger.LogInformation($"[GhostSouls] Response: {response.StatusCode}");
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -1001,6 +1327,34 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
         }
     }
 
+    /// <summary>
+    /// Refresh player data from API, keeping session earnings intact
+    /// </summary>
+    private async Task RefreshPlayerData(ulong steamId)
+    {
+        var freshData = await FetchPlayerData(steamId);
+        if (freshData == null) return;
+
+        if (_playerCache.TryGetValue(steamId, out var cachedData))
+        {
+            // Keep session earnings, update everything else
+            var sessionEarned = cachedData.SessionEarned;
+
+            Logger.LogInformation($"[GhostSouls] Refresh: API={freshData.Souls}, SessionEarned={sessionEarned}, Total={freshData.Souls + sessionEarned}");
+
+            // Update cache with fresh data + session earnings
+            freshData.Souls += sessionEarned; // Add session earnings to fresh total
+            freshData.SessionEarned = sessionEarned;
+            freshData.IsDirty = sessionEarned > 0;
+
+            _playerCache[steamId] = freshData;
+        }
+        else
+        {
+            _playerCache[steamId] = freshData;
+        }
+    }
+
     private async Task RegisterPlayer(ulong steamId, string username)
     {
         try
@@ -1011,7 +1365,7 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
                 "application/json"
             );
 
-            var response = await _httpClient.PostAsync("/api/plugin/player/register", content);
+            var response = await _httpClient.PostAsync($"{Config.ApiUrl}/api/plugin/player/register", content);
             response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)
@@ -1023,25 +1377,30 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
 
     private async Task SyncPlayerData(PlayerData data)
     {
-        if (!data.IsDirty) return;
+        if (!data.IsDirty || data.SessionEarned <= 0) return;
 
         try
         {
+            var soulsToSync = data.SessionEarned;
+
             var content = new StringContent(
                 JsonSerializer.Serialize(new
                 {
                     steamId = data.SteamId.ToString(),
-                    souls = data.Souls,
-                    soulsEarned = data.TotalEarned
+                    soulsToAdd = soulsToSync // Send delta, not absolute value
                 }),
                 System.Text.Encoding.UTF8,
                 "application/json"
             );
 
-            var response = await _httpClient.PostAsync("/api/plugin/player/sync", content);
+            var response = await _httpClient.PostAsync($"{Config.ApiUrl}/api/plugin/player/sync", content);
             response.EnsureSuccessStatusCode();
 
+            // Reset session earned after successful sync
+            data.SessionEarned = 0;
             data.IsDirty = false;
+
+            Logger.LogInformation($"[GhostSouls] Synced {soulsToSync} souls for {data.SteamId}");
         }
         catch (Exception ex)
         {
@@ -1066,6 +1425,85 @@ public class GhostSouls : BasePlugin, IPluginConfig<GhostConfig>
                 }
             });
         }
+    }
+
+    /// <summary>
+    /// Refreshes equipped skins for all players from the website (called every 60 seconds)
+    /// </summary>
+    private void RefreshAllPlayerSkins()
+    {
+        var players = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot).ToList();
+
+        foreach (var player in players)
+        {
+            var steamId = player.SteamID;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var freshData = await FetchPlayerData(steamId);
+                    if (freshData == null) return;
+
+                    // Check if skins changed
+                    var oldSkins = _playerCache.TryGetValue(steamId, out var cached)
+                        ? cached.EquippedSkins
+                        : new List<EquippedSkin>();
+
+                    var skinsChanged = !AreSkinListsEqual(oldSkins, freshData.EquippedSkins);
+
+                    if (skinsChanged)
+                    {
+                        // Update cache with new skins (keep session earnings)
+                        if (cached != null)
+                        {
+                            cached.EquippedSkins = freshData.EquippedSkins;
+                        }
+                        else
+                        {
+                            _playerCache[steamId] = freshData;
+                        }
+
+                        // Trigger WeaponPaints refresh on main thread
+                        Server.NextFrame(() =>
+                        {
+                            if (player.IsValid && player.PawnIsAlive)
+                            {
+                                // Execute WeaponPaints refresh command to reload from database
+                                player.ExecuteClientCommandFromServer("css_wp");
+                                player.PrintToChat($" {ChatColors.Purple}[Ghost] {ChatColors.Green}Skins updated from website!");
+                            }
+                        });
+
+                        Logger.LogInformation($"[GhostSouls] Skins updated for {steamId}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"[GhostSouls] Skin refresh error for {steamId}: {ex.Message}");
+                }
+            });
+        }
+    }
+
+    /// <summary>
+    /// Compares two skin lists to check if they're different
+    /// </summary>
+    private bool AreSkinListsEqual(List<EquippedSkin> a, List<EquippedSkin> b)
+    {
+        if (a.Count != b.Count) return false;
+
+        foreach (var skinA in a)
+        {
+            var match = b.FirstOrDefault(skinB =>
+                skinB.WeaponDefIndex == skinA.WeaponDefIndex &&
+                skinB.PaintKit == skinA.PaintKit &&
+                skinB.Team == skinA.Team);
+
+            if (match == null) return false;
+        }
+
+        return true;
     }
 
     public async Task AnnounceRareDrop(string playerName, string itemName, string weaponName)

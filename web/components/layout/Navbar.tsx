@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/cases', label: 'Cases' },
   { href: '/inventory', label: 'Inventory' },
+  { href: '/times', label: 'Records' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/giveaways', label: 'Giveaways' },
   { href: '/news', label: 'News' },

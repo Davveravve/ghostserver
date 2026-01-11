@@ -8,6 +8,7 @@ public class PlayerData
     public ulong SteamId { get; set; }
     public int Souls { get; set; }
     public int TotalEarned { get; set; }
+    public int SessionEarned { get; set; } = 0; // Souls earned this session (for delta sync)
     public List<EquippedSkin> EquippedSkins { get; set; } = new();
     public bool IsDirty { get; set; } = false;
     public string Role { get; set; } = "default";

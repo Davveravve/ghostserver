@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
-import { getPaintKit, getWeaponDefIndex, knifeDefIndex } from '@/lib/paint-kits'
+import { getPaintKit, getWeaponDefIndex, knifeDefIndex, gloveDefIndex } from '@/lib/paint-kits'
 
 // Knife name to CS2 weapon name mapping
 const knifeNameToWeapon: Record<string, string> = {
@@ -36,6 +36,7 @@ async function syncToWeaponPaints(
   try {
     const paintKit = getPaintKit(item.weapon, item.skinName)
     const isKnife = item.itemType === 'knife'
+    const isGloves = item.itemType === 'gloves'
 
     // WeaponPaints uses: 2 = T, 3 = CT
     const teams: number[] = []
@@ -59,6 +60,27 @@ async function syncToWeaponPaints(
         await prisma.$executeRaw`
           INSERT INTO wp_player_skins (steamid, weapon_team, weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed)
           VALUES (${steamId}, ${weaponTeam}, ${knifeDefIdx}, ${paintKit}, ${item.floatValue}, 0)
+          ON DUPLICATE KEY UPDATE
+            weapon_paint_id = ${paintKit},
+            weapon_wear = ${item.floatValue}
+        `
+      }
+    } else if (isGloves) {
+      // Get glove def index
+      const gloveDefIdx = gloveDefIndex[item.weapon] || 5030
+
+      for (const weaponTeam of teams) {
+        // Update wp_player_gloves table
+        await prisma.$executeRaw`
+          INSERT INTO wp_player_gloves (steamid, weapon_team, weapon_defindex)
+          VALUES (${steamId}, ${weaponTeam}, ${gloveDefIdx})
+          ON DUPLICATE KEY UPDATE weapon_defindex = ${gloveDefIdx}
+        `
+
+        // Also update wp_player_skins with the glove skin
+        await prisma.$executeRaw`
+          INSERT INTO wp_player_skins (steamid, weapon_team, weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed)
+          VALUES (${steamId}, ${weaponTeam}, ${gloveDefIdx}, ${paintKit}, ${item.floatValue}, 0)
           ON DUPLICATE KEY UPDATE
             weapon_paint_id = ${paintKit},
             weapon_wear = ${item.floatValue}
@@ -93,6 +115,7 @@ async function removeFromWeaponPaints(
 ) {
   try {
     const isKnife = item.itemType === 'knife'
+    const isGloves = item.itemType === 'gloves'
 
     if (isKnife) {
       // Delete knife entries for both teams
@@ -104,6 +127,17 @@ async function removeFromWeaponPaints(
       await prisma.$executeRaw`
         DELETE FROM wp_player_skins
         WHERE steamid = ${steamId} AND weapon_defindex = ${knifeDefIdx}
+      `
+    } else if (isGloves) {
+      // Delete glove entries for both teams
+      await prisma.$executeRaw`
+        DELETE FROM wp_player_gloves WHERE steamid = ${steamId}
+      `
+      // Also delete glove skins
+      const gloveDefIdx = gloveDefIndex[item.weapon] || 5030
+      await prisma.$executeRaw`
+        DELETE FROM wp_player_skins
+        WHERE steamid = ${steamId} AND weapon_defindex = ${gloveDefIdx}
       `
     } else {
       // Delete regular weapon skin

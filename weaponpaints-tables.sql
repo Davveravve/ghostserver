@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS `wp_player_skins` (
+    `steamid` varchar(18) NOT NULL,
+    `weapon_team` int(1) NOT NULL,
+    `weapon_defindex` int(6) NOT NULL,
+    `weapon_paint_id` int(6) NOT NULL,
+    `weapon_wear` float NOT NULL DEFAULT 0.000001,
+    `weapon_seed` int(16) NOT NULL DEFAULT 0,
+    `weapon_nametag` VARCHAR(128) DEFAULT NULL,
+    `weapon_stattrak` tinyint(1) NOT NULL DEFAULT 0,
+    `weapon_stattrak_count` int(10) NOT NULL DEFAULT 0,
+    `weapon_sticker_0` VARCHAR(128) NOT NULL DEFAULT '0;0;0;0;0;0;0',
+    `weapon_sticker_1` VARCHAR(128) NOT NULL DEFAULT '0;0;0;0;0;0;0',
+    `weapon_sticker_2` VARCHAR(128) NOT NULL DEFAULT '0;0;0;0;0;0;0',
+    `weapon_sticker_3` VARCHAR(128) NOT NULL DEFAULT '0;0;0;0;0;0;0',
+    `weapon_sticker_4` VARCHAR(128) NOT NULL DEFAULT '0;0;0;0;0;0;0',
+    `weapon_keychain` VARCHAR(128) NOT NULL DEFAULT '0;0;0;0;0',
+    UNIQUE (`steamid`, `weapon_team`, `weapon_defindex`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `wp_player_knife` (
+    `steamid` varchar(18) NOT NULL,
+    `weapon_team` int(1) NOT NULL,
+    `knife` varchar(64) NOT NULL,
+    UNIQUE (`steamid`, `weapon_team`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `wp_player_gloves` (
+    `steamid` varchar(18) NOT NULL,
+    `weapon_team` int(1) NOT NULL,
+    `weapon_defindex` int(11) NOT NULL,
+    UNIQUE (`steamid`, `weapon_team`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

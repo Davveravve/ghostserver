@@ -223,6 +223,98 @@ model GiveawayWinner {
   @@index([giveawayId])
 }
 
+// Plugin Settings (managed from admin panel)
+model PluginSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique  // e.g. "sponsor.enabled", "sponsor.interval", "discord.webhook"
+  value       String   @db.Text // JSON or simple value
+  category    String   @default("general") // general, sponsor, discord, announcements, server
+  description String?  // Human readable description
+  updatedAt   DateTime @updatedAt
+}
+
+// Announcement rotation (managed from admin)
+model Announcement {
+  id          String   @id @default(cuid())
+  name        String   // Internal name for easy identification
+  message     String   @db.Text
+  type        String   @default("chat") // chat, center, html
+  color       String   @default("purple") // Chat color: red, orange, yellow, green, blue, purple, gold, white
+  prefix      String   @default("[Ghost]") // Prefix before message, e.g. [SPONSOR], [INFO], [TIP]
+  prefixColor String   @default("purple") // Color of prefix
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0) // For rotation order
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Map Pool (for voting and rotation)
+model MapPool {
+  id          String   @id @default(cuid())
+  workshopId  String   // Workshop ID
+  name        String   // Display name (e.g. "surf_utopia")
+  gameMode    String   // surf, bhop, retake, competitive
+  tier        Int      @default(1) // Difficulty tier 1-6
+  isActive    Boolean  @default(true)
+  imageUrl    String?  @db.Text
+  createdAt   DateTime @default(now())
+}
+
+// Surf/Bhop Times (for leaderboards)
+model PlayerTime {
+  id          String   @id @default(cuid())
+  steamId     String
+  mapName     String
+  style       String   @default("normal") // normal, sideways, w-only, etc
+  time        Float    // Time in seconds
+  checkpoints Int      @default(0)
+  isWr        Boolean  @default(false) // Is this the world record?
+  createdAt   DateTime @default(now())
+
+  @@unique([steamId, mapName, style])
+  @@index([mapName])
+  @@index([steamId])
+}
+
+// WeaponPaints tables (external plugin - managed by raw SQL, just defined here to prevent drops)
+model WpPlayerSkins {
+  steamid              String @db.VarChar(32)
+  weapon_team          Int    @default(0)
+  weapon_defindex      Int
+  weapon_paint_id      Int    @default(0)
+  weapon_wear          Float  @default(0.0001)
+  weapon_seed          Int    @default(0)
+  weapon_stattrak      Int    @default(0)
+  weapon_stattrak_count Int   @default(0)
+  weapon_sticker_0     String @default("") @db.VarChar(256)
+  weapon_sticker_1     String @default("") @db.VarChar(256)
+  weapon_sticker_2     String @default("") @db.VarChar(256)
+  weapon_sticker_3     String @default("") @db.VarChar(256)
+  weapon_sticker_4     String @default("") @db.VarChar(256)
+  weapon_keychain      String @default("") @db.VarChar(256)
+
+  @@id([steamid, weapon_team, weapon_defindex])
+  @@map("wp_player_skins")
+}
+
+model WpPlayerKnife {
+  steamid     String @db.VarChar(32)
+  weapon_team Int    @default(0)
+  knife       String @db.VarChar(64)
+
+  @@id([steamid, weapon_team])
+  @@map("wp_player_knife")
+}
+
+model WpPlayerGloves {
+  steamid         String @db.VarChar(32)
+  weapon_team     Int    @default(0)
+  weapon_defindex Int
+
+  @@id([steamid, weapon_team])
+  @@map("wp_player_gloves")
+}
+
 // News and announcements
 model News {
   id          String   @id @default(cuid())

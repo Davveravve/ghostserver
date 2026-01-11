@@ -196,66 +196,150 @@ ghost/
 - [x] Giveaway system (random + leaderboard)
 - [x] News/announcements system
 
-### FORTSÄTT HÄRIFRÅN (2026-01-11)
+---
 
-**Fixade duplicate keys-error i paint-kits.ts. Behöver pusha till Vercel och sen deploya plugin.**
+## WeaponPaints Integration (Skinchanger)
 
-#### Steg 1: Pusha hemsidan till Vercel
-```bash
-cd C:\Users\david\Desktop\ghost\web
-git add .
-git commit -m "Fix duplicate keys in paint-kits.ts"
-git push
-```
-(Vänta tills Vercel är klar med deploy)
+### Hur det fungerar
+1. Spelare equippar skins på hemsidan (ghostservers.site/inventory)
+2. Hemsidan skriver till `wp_player_skins` och `wp_player_knife` tabeller
+3. WeaponPaints plugin läser från dessa tabeller och applicerar skins i spelet
 
-#### Steg 2: SSH till servern
-```bash
-ssh root@46.224.197.229
-```
+### WeaponPaints Plugin
+- **Plugin:** https://github.com/Nereziel/cs2-WeaponPaints
+- **Version:** build-399+
+- **Path:** `/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/WeaponPaints/`
 
-#### Steg 3: Uppdatera plugin-filen
-```bash
-cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSouls
-nano GhostSouls.dll.b64
-```
-(Klistra in innehållet från `C:\Users\david\Desktop\ghost\plugin-b64.txt`, spara med Ctrl+X, Y, Enter)
+### Databas-tabeller (wp_player_*)
+```sql
+-- Weapon skins
+wp_player_skins (steamid, weapon_team, weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed, ...)
 
-#### Steg 4: Dekoda och sätt rättigheter
-```bash
-base64 -d GhostSouls.dll.b64 > GhostSouls.dll && rm GhostSouls.dll.b64 && chown cs2:cs2 GhostSouls.dll
+-- Knife model
+wp_player_knife (steamid, weapon_team, knife)
+
+-- Gloves
+wp_player_gloves (steamid, weapon_team, weapon_defindex)
 ```
 
-#### Steg 5: Starta om servern
-```bash
-su - cs2
-screen -r cs2
-```
-(Tryck Ctrl+C för att stoppa, sen kör `~/start-cs2.sh`)
+**weapon_team värden:**
+- `2` = Terrorists (T)
+- `3` = Counter-Terrorists (CT)
 
-#### Steg 6: Testa
-- Gå till hemsidan -> Inventory -> Klicka på en skin -> Equip
-- Joina servern, skinnet ska laddas vid spawn
-- `!souls` ska visa korrekta souls från sidan
+### Konfiguration
+**WeaponPaints.json:** `/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/plugins/WeaponPaints/WeaponPaints.json`
+```json
+{
+  "DatabaseHost": "localhost",
+  "DatabasePort": 3306,
+  "DatabaseUser": "ghost",
+  "DatabasePassword": "GhostServer2024",
+  "DatabaseName": "ghost_gaming"
+}
+```
+
+**core.json:** `FollowCS2ServerGuidelines` måste vara `false`
+
+### Installation (om det behövs igen)
+```bash
+# 1. Ladda ner
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins
+wget https://github.com/Nereziel/cs2-WeaponPaints/releases/download/build-399/WeaponPaints.zip
+unzip WeaponPaints.zip
+chown -R cs2:cs2 WeaponPaints
+
+# 2. Kopiera gamedata
+cp plugins/WeaponPaints/gamedata/weaponpaints.json ../gamedata/
+
+# 3. Ändra core.json
+nano ../configs/core.json
+# Sätt FollowCS2ServerGuidelines till false
+
+# 4. Starta server, konfigurera databas, starta om
+```
+
+### Varning
+Valve tillåter inte officiellt skin-plugins. Risk för GSLT-ban finns.
 
 ---
 
-### NYTT I DENNA UPPDATERING
+### FORTSÄTT HÄRIFRÅN (2026-01-11)
+
+**Stora uppdateringar gjorda - Admin panel, Times/Records, Discord integration!**
+
+---
+
+### SENASTE UPPDATERING (2026-01-11)
+
+#### Nya Admin-sidor
+- [x] `/admin/settings` - Hantera announcements med färgval
+- [x] `/admin/maps` - Map pool för surf/bhop med suggested maps
+- [x] Dynamiska plugin-inställningar via databas
+
+#### Surf/Bhop Times
+- [x] `/times` - Leaderboard för surf/bhop records
+- [x] API för att spara/hämta times (`/api/times`)
+- [x] SharpTimer setup guide
+
+#### Discord Integration
+- [x] Webhook för rare drops (kniv, handskar, legendary+)
+- [x] `DISCORD_WEBHOOK_URL` i .env
+- [x] Automatisk notifikation vid case opening
+
+#### Server Configs
+- [x] `server-configs/surf-server.cfg` - Komplett surf config
+- [x] `server-configs/bhop-server.cfg` - Komplett bhop config
+- [x] No friendly fire, buy anywhere, unlimited money
+
+#### VPS Deployment
+- [x] `server-configs/VPS-DEPLOYMENT.md` - Guide för att flytta hemsidan till VPS
+- [x] PM2 + Nginx + SSL setup
+- [x] Snabbare API (localhost databas)
+
+#### Nya databas-modeller
+```prisma
+PluginSettings    - Dynamiska plugin-inställningar
+Announcement      - Roterande meddelanden med färg
+MapPool           - Surf/bhop maps
+PlayerTime        - Surf/bhop leaderboards
+```
+
+---
+
+### NYA ENVIRONMENT VARIABLES
+```bash
+# Discord (lägg till i .env.local)
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+```
+
+---
+
+### DISCORD
+- **Server:** discord.gg/aSDrPk6Y8q
+- **Webhook:** Sätt DISCORD_WEBHOOK_URL i Vercel/VPS
+
+---
+
+### ATT GÖRA NÄST
+- [ ] Konfigurera WeaponPaints.json med databas-credentials
+- [ ] Installera SharpTimer på VPS
+- [ ] Migrera hemsidan till VPS (valfritt, se VPS-DEPLOYMENT.md)
+- [ ] Testa Discord webhooks
+- [ ] Lägg till fler maps via admin panel
+
+---
+
+### TIDIGARE UPPDATERINGAR
 - [x] Equip/Unequip skins från hemsidan (CT/T/Both)
 - [x] PaintKit-mapping för 200+ CS2 skins
 - [x] Sync skickar nu delta (intjänade souls) istället för att överskriva
 - [x] !souls hämtar nu senaste från sidan först
 - [x] Giveaway system (random + leaderboard)
 - [x] News system
+- [x] WeaponPaints integration för skinchanger
+- [x] Team-baserade skins (CT/T/Both)
+- [x] Kniv-modeller synkas (Karambit, M9, etc)
 - [x] HUD som visar souls (center screen)
-
-### UPCOMING
-- [ ] SharpTimer integration (surf times)
-- [ ] Map voting
-- [ ] Player profiles
-- [ ] Retake server setup (port 27016)
-- [ ] DNS subdomains (surf.ghostservers.site, etc)
-- [ ] Fler surf maps
 
 ---
 

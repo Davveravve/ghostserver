@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { getCaseById, getCaseItems } from '@/lib/items-data'
 import { getRarityFromType } from '@/lib/item-utils'
+import { sendRareDropToDiscord } from '@/lib/discord'
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('ghost-session')?.value
@@ -106,8 +107,27 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      return { updatedPlayer, inventoryItem }
+      return { updatedPlayer, inventoryItem, rarity }
     })
+
+    // Send rare drop notification to Discord (async, don't wait)
+    const isKnife = wonItem.weapon?.includes('Knife') || wonItem.weapon?.includes('Karambit') || wonItem.weapon?.includes('Bayonet')
+    const isGloves = wonItem.weapon?.includes('Gloves')
+
+    if (result.rarity === 'legendary' || result.rarity === 'ultra' || isKnife || isGloves) {
+      sendRareDropToDiscord({
+        playerName: player.username,
+        steamId: player.steamId,
+        itemName: wonItem.name,
+        weaponName: wonItem.weapon,
+        wear: wonItem.wear,
+        floatValue: floatValue,
+        rarity: result.rarity,
+        isKnife,
+        isGloves,
+        imageUrl: wonItem.image_url,
+      }).catch(err => console.error('Discord webhook failed:', err))
+    }
 
     return NextResponse.json({
       success: true,

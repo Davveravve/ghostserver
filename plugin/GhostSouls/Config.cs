@@ -61,6 +61,9 @@ public class SoulsConfig
 
     [JsonPropertyName("MinKillIntervalSeconds")]
     public int MinKillIntervalSeconds { get; set; } = 3;
+
+    [JsonPropertyName("SoulsPerMinute")]
+    public int SoulsPerMinute { get; set; } = 0; // 0 = disabled, set to e.g. 3 for surf servers
 }
 
 public class SponsorConfig
