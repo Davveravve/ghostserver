@@ -11,9 +11,6 @@ interface LeaderboardPlayer {
   avatarUrl: string | null
   souls?: number
   playtime?: number
-  casesOpened?: number
-  rareCount?: number
-  bestDrop?: string | null
   elo?: number
   wins?: number
   losses?: number
@@ -24,17 +21,17 @@ interface CurrentUserStats {
   avatarUrl: string | null
   totalSoulsEarned: number
   playtimeMinutes: number
-  casesOpened: number
-  rareItems: number
+  elo: number
+  wins: number
+  losses: number
   soulsRank: number
-  casesRank: number
+  eloRank: number
 }
 
 interface LeaderboardData {
   topSouls: LeaderboardPlayer[]
   topElo: LeaderboardPlayer[]
-  topCasesOpened: LeaderboardPlayer[]
-  topRareItems: LeaderboardPlayer[]
+  topPlaytime: LeaderboardPlayer[]
   currentUser: CurrentUserStats | null
 }
 
@@ -63,8 +60,7 @@ export default function LeaderboardPage() {
 
   const topSouls = data?.topSouls || []
   const topElo = data?.topElo || []
-  const topCasesOpened = data?.topCasesOpened || []
-  const topRareItems = data?.topRareItems || []
+  const topPlaytime = data?.topPlaytime || []
   const currentUser = data?.currentUser
 
   return (
@@ -157,138 +153,61 @@ export default function LeaderboardPage() {
           </div>
 
           {/* ELO Leaderboard */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-heading text-xl font-bold flex items-center gap-2">
-                    <TrophyIcon className="w-6 h-6 text-yellow-400" />
-                    Top ELO Rankings
-                  </h2>
-                  <span className="text-sm text-gray-400">Competitive ranking</span>
-                </div>
-
-                {topElo.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-left text-sm text-gray-400 border-b border-white/10">
-                          <th className="pb-3 pr-4">Rank</th>
-                          <th className="pb-3 pr-4">Player</th>
-                          <th className="pb-3 pr-4 text-right">ELO</th>
-                          <th className="pb-3 text-right">W/L</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {topElo.map((player) => (
-                          <tr
-                            key={player.rank}
-                            className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                          >
-                            <td className="py-4 pr-4">
-                              <RankBadge rank={player.rank} />
-                            </td>
-                            <td className="py-4 pr-4">
-                              <div className="flex items-center gap-3">
-                                {player.avatarUrl ? (
-                                  <img
-                                    src={player.avatarUrl}
-                                    alt={player.username}
-                                    className="w-10 h-10 rounded-full"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-ghost-elevated flex items-center justify-center">
-                                    <UserIcon className="w-5 h-5 text-gray-500" />
-                                  </div>
-                                )}
-                                <span className="font-semibold">{player.username}</span>
-                              </div>
-                            </td>
-                            <td className="py-4 pr-4 text-right">
-                              <span className="font-bold text-yellow-400">
-                                {player.elo?.toLocaleString() || 1000}
-                              </span>
-                            </td>
-                            <td className="py-4 text-right text-gray-400">
-                              <span className="text-green-400">{player.wins || 0}</span>
-                              <span className="text-gray-600">/</span>
-                              <span className="text-red-400">{player.losses || 0}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    No ranked players yet
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Rare Drops Leaderboard */}
           <Card>
             <CardContent>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-heading text-xl font-bold flex items-center gap-2">
-                  <span className="text-yellow-400">
-                    <StarIcon className="w-5 h-5" />
-                  </span>
-                  Luckiest Players
+                  <TrophyIcon className="w-6 h-6 text-yellow-400" />
+                  Top ELO
                 </h2>
-                <span className="text-sm text-gray-400">Rare items</span>
+                <span className="text-sm text-gray-400">Competitive</span>
               </div>
 
-              {topRareItems.length > 0 ? (
+              {topElo.length > 0 ? (
                 <div className="space-y-3">
-                  {topRareItems.map((player) => (
+                  {topElo.map((player) => (
                     <div
                       key={player.rank}
                       className="flex items-center gap-3 p-3 rounded-lg bg-ghost-bg hover:bg-ghost-elevated transition-colors"
                     >
                       <RankBadge rank={player.rank} size="sm" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold">{player.username}</div>
-                        {player.bestDrop && (
-                          <div className="text-sm text-gray-400 truncate">
-                            <span className="text-yellow-400">
-                              <StarIcon className="w-3 h-3 inline mr-1" />
-                            </span>
-                            {player.bestDrop}
-                          </div>
-                        )}
+                        <div className="font-semibold truncate">{player.username}</div>
+                        <div className="text-xs text-gray-500">
+                          <span className="text-green-400">{player.wins || 0}W</span>
+                          {' / '}
+                          <span className="text-red-400">{player.losses || 0}L</span>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-yellow-400">{player.rareCount}</div>
-                        <div className="text-xs text-gray-500">rare</div>
+                        <div className="font-bold text-yellow-400">{player.elo || 1000}</div>
+                        <div className="text-xs text-gray-500">ELO</div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  No rare drops yet
+                  No ranked players yet
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Cases Opened Leaderboard */}
+          {/* Playtime Leaderboard */}
           <Card>
             <CardContent>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-heading text-xl font-bold flex items-center gap-2">
-                  <CaseIcon className="w-5 h-5 text-gray-400" />
-                  Most Cases Opened
+                  <ClockIcon className="w-5 h-5 text-blue-400" />
+                  Most Active
                 </h2>
-                <span className="text-sm text-gray-400">All time</span>
+                <span className="text-sm text-gray-400">Playtime</span>
               </div>
 
-              {topCasesOpened.length > 0 ? (
+              {topPlaytime.length > 0 ? (
                 <div className="space-y-3">
-                  {topCasesOpened.map((player) => (
+                  {topPlaytime.map((player) => (
                     <div
                       key={player.rank}
                       className="flex items-center gap-3 p-3 rounded-lg bg-ghost-bg hover:bg-ghost-elevated transition-colors"
@@ -298,15 +217,15 @@ export default function LeaderboardPage() {
                         <span className="font-semibold">{player.username}</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold">{player.casesOpened?.toLocaleString() || 0}</div>
-                        <div className="text-xs text-gray-500">cases</div>
+                        <div className="font-bold text-blue-400">{formatPlaytime(player.playtime || 0)}</div>
+                        <div className="text-xs text-gray-500">on servers</div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  No cases opened yet
+                  No playtime recorded yet
                 </div>
               )}
             </CardContent>
@@ -319,7 +238,6 @@ export default function LeaderboardPage() {
         <Card className="mt-8">
           <CardContent className="py-6">
             {isAuthenticated && currentUser ? (
-              // Show user's own stats
               <div>
                 <h3 className="font-heading text-xl font-bold mb-4 text-center">Your Stats</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -330,14 +248,14 @@ export default function LeaderboardPage() {
                     highlight
                   />
                   <StatCard
-                    label="Cases Rank"
-                    value={`#${currentUser.casesRank}`}
-                    subValue={`${currentUser.casesOpened} opened`}
+                    label="ELO Rank"
+                    value={`#${currentUser.eloRank}`}
+                    subValue={`${currentUser.elo} rating`}
                   />
                   <StatCard
-                    label="Rare Items"
-                    value={currentUser.rareItems.toString()}
-                    subValue="announcement worthy"
+                    label="W/L Record"
+                    value={`${currentUser.wins}/${currentUser.losses}`}
+                    subValue="wins/losses"
                   />
                   <StatCard
                     label="Playtime"
@@ -347,7 +265,6 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             ) : (
-              // Show sign in CTA
               <div className="text-center">
                 <h3 className="font-heading text-xl font-bold mb-2">Want to climb the ranks?</h3>
                 <p className="text-gray-400 mb-4">
@@ -446,27 +363,20 @@ function UserIcon({ className }: { className?: string }) {
   )
 }
 
-function StarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-    </svg>
-  )
-}
-
-function CaseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    </svg>
-  )
-}
-
 function TrophyIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 15a6 6 0 006-6V4H6v5a6 6 0 006 6zm0 2a8 8 0 01-8-8V2h16v7a8 8 0 01-8 8zm-2 2h4v3h3v2H7v-2h3v-3z"/>
       <path d="M4 4H2v5a4 4 0 004 4V9a2 2 0 01-2-2V4zM20 4h2v5a4 4 0 01-4 4V9a2 2 0 002-2V4z"/>
+    </svg>
+  )
+}
+
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
     </svg>
   )
 }

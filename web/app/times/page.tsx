@@ -83,42 +83,38 @@ export default function TimesPage() {
 
       {/* Mode Toggle */}
       <div className="flex justify-center mb-8">
-        <div className="bg-ghost-card/50 p-1.5 rounded-xl inline-flex gap-1">
+        <div className="inline-flex border border-white/10 rounded-lg overflow-hidden">
           <button
             onClick={() => {
               setActiveMode('surf')
               setSelectedMap('surf_beginner')
             }}
-            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 ${
+            className={`px-6 py-2.5 font-medium transition-all duration-200 flex items-center gap-2 ${
               activeMode === 'surf'
-                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                ? 'bg-purple-500/20 text-purple-400 border-r border-purple-500/30'
+                : 'text-gray-400 hover:text-white hover:bg-white/5 border-r border-white/10'
             }`}
           >
-            <span className="flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Surf
-            </span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Surf
           </button>
           <button
             onClick={() => {
               setActiveMode('bhop')
               setSelectedMap('bhop_badges')
             }}
-            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 ${
+            className={`px-6 py-2.5 font-medium transition-all duration-200 flex items-center gap-2 ${
               activeMode === 'bhop'
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                ? 'bg-emerald-500/20 text-emerald-400'
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className="flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              Bhop
-            </span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            Bhop
           </button>
         </div>
       </div>
@@ -126,7 +122,7 @@ export default function TimesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Map Selection Sidebar */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-4">
+          <Card className="sticky top-20">
             <CardContent className="p-4">
               <h2 className="font-heading text-lg font-bold mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
