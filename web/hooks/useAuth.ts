@@ -53,10 +53,10 @@ export function useAuth() {
 
   const fetchSouls = useCallback(async () => {
     try {
-      const res = await fetch('/api/inventory')
+      const res = await fetch('/api/auth/me')
       if (res.ok) {
         const data = await res.json()
-        setState(prev => ({ ...prev, souls: data.stats?.souls ?? null }))
+        setState(prev => ({ ...prev, souls: data.souls ?? 0 }))
       }
     } catch (error) {
       console.error('Failed to fetch souls:', error)

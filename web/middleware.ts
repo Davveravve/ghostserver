@@ -2,17 +2,17 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
-// Rutter som kräver inloggning
-const protectedRoutes = ['/inventory', '/open']
+// Routes that require authentication
+const protectedRoutes = ['/admin']
 
-// Rutter som bara ska vara tillgängliga för utloggade användare
+// Routes only for unauthenticated users
 const authRoutes = ['/auth/signin']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const token = request.cookies.get('ghost-session')?.value
 
-  // Kolla om användaren är autentiserad
+  // Check if user is authenticated
   let isAuthenticated = false
   if (token) {
     try {
@@ -22,12 +22,11 @@ export async function middleware(request: NextRequest) {
       await jwtVerify(token, secret)
       isAuthenticated = true
     } catch {
-      // Ogiltig token
       isAuthenticated = false
     }
   }
 
-  // Skyddade rutter - kräver inloggning
+  // Protected routes - require login
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   )
@@ -38,7 +37,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Auth-rutter - omdirigera inloggade användare
+  // Auth routes - redirect logged-in users
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
 
   if (isAuthRoute && isAuthenticated) {
@@ -50,9 +49,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Matcha alla skyddade rutter
-    '/inventory/:path*',
-    '/open/:path*',
+    '/admin/:path*',
     '/auth/:path*',
   ],
 }

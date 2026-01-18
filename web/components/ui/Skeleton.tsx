@@ -48,16 +48,3 @@ export function SkeletonAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
   return <Skeleton className={cn('rounded-full', sizeClasses[size])} />
 }
-
-// Inventory item skeleton
-export function SkeletonInventoryItem() {
-  return (
-    <div className="bg-ghost-card rounded-lg border border-white/5 overflow-hidden">
-      <Skeleton className="aspect-square w-full" />
-      <div className="p-3">
-        <Skeleton className="h-4 w-full mb-2" />
-        <Skeleton className="h-3 w-2/3" />
-      </div>
-    </div>
-  )
-}
