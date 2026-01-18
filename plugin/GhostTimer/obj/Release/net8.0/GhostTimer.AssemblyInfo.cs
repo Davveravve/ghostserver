@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GhostTimer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+50b5ff60b6099f2a2c4d1e7b75741e4eadc4b137")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2f6cd08613a056031311d983723efc2074b6a452")]
 [assembly: System.Reflection.AssemblyProductAttribute("GhostTimer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GhostTimer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

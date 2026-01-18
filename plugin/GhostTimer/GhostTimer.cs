@@ -701,13 +701,17 @@ public class GhostTimer : BasePlugin
             timeStr = "0:00.0";
         }
 
-        // Speed color based on velocity
-        var speedColor = speed > 2000 ? "green" : speed > 1000 ? "yellow" : "white";
-        var timerColor = data.IsRunning ? "green" : "grey";
-
-        // Use simple center text instead of HTML to avoid flickering
-        // Format: Speed | Time
-        var hudText = $"Speed: {speed} u/s | Time: {timeStr}";
+        // Build HUD text with speed, time, and PB
+        string hudText;
+        if (data.BestTime > 0)
+        {
+            var pbStr = FormatTimeSimple(data.BestTime);
+            hudText = $"{speed} u/s | {timeStr} | PB: {pbStr}";
+        }
+        else
+        {
+            hudText = $"{speed} u/s | {timeStr} | PB: --:--";
+        }
 
         // Only update if text changed (avoid unnecessary redraws)
         if (data.LastHudContent == hudText) return;
@@ -1178,6 +1182,26 @@ public class GhostTimer : BasePlugin
             var isCurrent = _currentMap.Contains(map.workshopId) ? $" {ChatColors.Yellow}(current)" : "";
             player.PrintToChat($" {ChatColors.Green}{map.name}{isCurrent}");
         }
+        player.PrintToChat($" ");
+    }
+
+    [ConsoleCommand("css_help", "Show available commands")]
+    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnHelpCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+
+        player.PrintToChat($" ");
+        player.PrintToChat($" {ChatColors.Gold}=== Ghost Timer Commands ===");
+        player.PrintToChat($" {ChatColors.Yellow}!r {ChatColors.Default}- Restart/respawn");
+        player.PrintToChat($" {ChatColors.Yellow}!cp {ChatColors.Default}- Save checkpoint");
+        player.PrintToChat($" {ChatColors.Yellow}!tp {ChatColors.Default}- Teleport to checkpoint");
+        player.PrintToChat($" {ChatColors.Yellow}!pb {ChatColors.Default}- Show your personal best");
+        player.PrintToChat($" {ChatColors.Yellow}!sr {ChatColors.Default}- Show server record");
+        player.PrintToChat($" {ChatColors.Yellow}!timer {ChatColors.Default}- Toggle HUD display");
+        player.PrintToChat($" {ChatColors.Yellow}!hide {ChatColors.Default}- Hide other players");
+        player.PrintToChat($" {ChatColors.Yellow}!maps {ChatColors.Default}- Show available maps");
+        player.PrintToChat($" {ChatColors.Yellow}!vote {ChatColors.Default}- Vote for map change");
         player.PrintToChat($" ");
     }
 

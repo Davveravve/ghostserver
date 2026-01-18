@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { ServerStatus } from '@/components/ServerStatus'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
+import { HomeCTA } from '@/components/HomeCTA'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -265,23 +266,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-accent-primary/10 via-transparent to-transparent" />
-        <div className="relative max-w-3xl mx-auto px-4 text-center">
-          <h2 className="font-heading text-4xl font-bold mb-4">
-            Ready to Start?
-          </h2>
-          <p className="text-gray-400 mb-8">
-            Sign in with Steam to track your progress and compete for records.
-          </p>
-          <Link href="/api/auth/steam">
-            <Button size="lg">
-              Sign In with Steam
-            </Button>
-          </Link>
-        </div>
-      </section>
+      {/* CTA - Only shown when not logged in */}
+      <HomeCTA />
     </div>
   )
 }
