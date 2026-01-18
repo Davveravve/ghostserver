@@ -9,8 +9,6 @@ import { SoundControl } from '@/components/ui/SoundControl'
 
 const navLinks = [
   { href: '/', label: 'Home' },
-  { href: '/cases', label: 'Cases' },
-  { href: '/inventory', label: 'Inventory' },
   { href: '/times', label: 'Records' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/giveaways', label: 'Giveaways' },
@@ -103,13 +101,6 @@ export function Navbar() {
                           <div className="font-medium truncate">{user.name}</div>
                           <div className="text-xs text-gray-500">Steam ID: {user.steamId}</div>
                         </div>
-                        <Link
-                          href="/inventory"
-                          onClick={() => setShowUserMenu(false)}
-                          className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5"
-                        >
-                          My Inventory
-                        </Link>
                         <a
                           href={user.profileUrl}
                           target="_blank"

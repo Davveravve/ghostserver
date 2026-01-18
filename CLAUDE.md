@@ -1,17 +1,60 @@
 # Ghost Gaming Project
 
+## SSH Access (VIKTIGT FÖR CLAUDE)
+
+### Lösenordsfri SSH-åtkomst
+SSH-nyckel är konfigurerad på Davids dator. Claude kan köra kommandon direkt på VPS:en:
+
+```bash
+# Kör kommando på VPS:en
+ssh ghost "kommando här"
+
+# Exempel:
+ssh ghost "pm2 status"
+ssh ghost "systemctl status nginx"
+ssh ghost "tail -50 /var/log/auth.log"
+```
+
+### SSH Config (~/.ssh/config)
+```
+Host ghost
+    HostName 46.224.197.229
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+### Direkt VPS-åtkomst
+Claude har FULL åtkomst till VPS:en via `ssh ghost "kommando"`. Använd detta för:
+- Deploya uppdateringar
+- Starta om tjänster
+- Läsa loggar
+- Hantera CS2-servern
+- Köra databas-queries
+
+### Säkerhet (2026-01-15)
+- SSH lösenordsinloggning: **AVSTÄNGT**
+- Endast SSH-nyckel fungerar
+- fail2ban: Blockerar efter 3 misslyckade försök i 24h
+- UFW brandvägg: Endast port 22, 80, 443, 27015-27016 öppna
+- Automatiska säkerhetsuppdateringar: **PÅ**
+
+---
+
 ## Infrastructure
 
 ### Domain
 - **Domain:** ghostservers.site
 - **Registrar:** Namecheap
 
-### Vercel (Website Hosting)
+### VPS (Website + Database + CS2 Servers)
 - **URL:** https://www.ghostservers.site
-- **Project:** ghostserver
 - **GitHub:** https://github.com/Davveravve/ghostserver
+- **Hosting:** Hemsidan körs på VPS (INTE Vercel)
+- **Web Path:** /var/www/ghost eller /home/cs2/ghost/web
+- **Process Manager:** PM2
+- **Reverse Proxy:** Nginx
 
-### Hetzner VPS (Database + CS2 Servers)
+### Hetzner VPS
 - **IP:** 46.224.197.229
 - **Location:** Nuremberg, Germany
 - **Plan:** CPX22 (2 vCPU, 4GB RAM)
@@ -27,12 +70,16 @@
 - **Password:** GhostServer2024
 - **DATABASE_URL:** mysql://ghost:GhostServer2024@46.224.197.229:3306/ghost_gaming
 
-### API Keys (in Vercel Environment Variables)
-- **NEXTAUTH_URL:** https://www.ghostservers.site
+### Environment Variables (VPS .env.local)
+- **NEXTAUTH_URL:** https://www.ghostservers.site (VIKTIGT: inte localhost!)
 - **NEXTAUTH_SECRET:** 9oPQqEUNivTzJ8TtFxH7fa8TpKw23rvsJ4Pm8fcL6IQ=
 - **STEAM_API_KEY:** (user's Steam API key)
 - **PLUGIN_API_KEY:** 3NULQW7WPpW3ZquX2WzFVyvWx2y09DQEg+JBA4+JVv4=
 - **OWNER_STEAM_ID:** (your Steam ID for admin access)
+- **DATABASE_URL:** mysql://ghost:GhostServer2024@localhost:3306/ghost_gaming
+
+**VIKTIGT:** .env.local på VPS måste ha NEXTAUTH_URL=https://www.ghostservers.site
+Om Steam login redirectar till localhost:3000 är denna variabel fel!
 
 ---
 
@@ -73,6 +120,34 @@ cd /home/cs2/cs2-server
 - Anslut: `screen -r cs2`
 - Lämna (keep running): `Ctrl+A` sen `D`
 - Döda alla: `killall screen`
+
+### Ladda upp egna plugins (FÖREDRAGEN METOD)
+Använd base64 via PowerShell + SSH istället för SCP/SFTP:
+
+**Steg 1 - Windows PowerShell (kopierar till clipboard):**
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\PLUGINNAME\bin\Release\net8.0\PLUGINNAME.dll")) | clip
+```
+
+**Steg 2 - SSH till VPS:**
+```bash
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/PLUGINNAME/
+cat > temp.b64 << 'EOF'
+# Klistra in texten (Ctrl+Shift+V), tryck Enter, skriv EOF
+EOF
+base64 -d temp.b64 > PLUGINNAME.dll
+rm temp.b64
+chown cs2:cs2 PLUGINNAME.dll
+```
+
+**Steg 3 - Starta om servern och verifiera:**
+```bash
+pkill -f cs2
+su - cs2
+screen -S surf
+./start-surf.sh
+# I konsolen: css_plugins list
+```
 
 ---
 
@@ -117,11 +192,10 @@ ghost/
 │   ├── lib/               # Utilities & data
 │   └── prisma/            # Database schema
 │
-├── plugin/                 # CS2 Plugin (C#)
-│   └── GhostSouls/        # CounterStrikeSharp plugin
-│       ├── GhostSouls.cs  # Main plugin
-│       ├── Config.cs      # Configuration
-│       └── Models.cs      # Data models
+├── plugin/                 # CS2 Plugins (C#)
+│   ├── GhostSouls/        # Economy, ranks, chat tags
+│   ├── GhostTimer/        # Surf timer, speedometer, PB/SR
+│   └── GhostSkins/        # Skinchanger från databas
 │
 └── CLAUDE.md              # This file
 ```
@@ -198,257 +272,241 @@ ghost/
 
 ---
 
-## WeaponPaints Integration (Skinchanger)
+## Skinchanger (WeaponPaints)
 
 ### Hur det fungerar
 1. Spelare equippar skins på hemsidan (ghostservers.site/inventory)
 2. Hemsidan skriver till `wp_player_skins` och `wp_player_knife` tabeller
 3. WeaponPaints plugin läser från dessa tabeller och applicerar skins i spelet
 
-### WeaponPaints Plugin
-- **Plugin:** https://github.com/Nereziel/cs2-WeaponPaints
-- **Version:** build-399+
+### WeaponPaints Plugin (Nereziel/cs2-WeaponPaints)
 - **Path:** `/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/WeaponPaints/`
+- **Config:** `/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/plugins/WeaponPaints/WeaponPaints.json`
+- **Gamedata:** `/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/gamedata/weaponpaints.json`
+- **Kommandon:** !ws, !knife, !gloves, !wp (refresh)
+- **Dependencies:** MenuManagerCore, PlayerSettings, AnyBaseLib
+
+### VIKTIGT: core.json
+För att skins ska fungera MÅSTE denna inställning vara false:
+```json
+"FollowCS2ServerGuidelines": false
+```
 
 ### Databas-tabeller (wp_player_*)
 ```sql
--- Weapon skins
-wp_player_skins (steamid, weapon_team, weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed, ...)
-
--- Knife model
+wp_player_skins (steamid, weapon_team, weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed)
 wp_player_knife (steamid, weapon_team, knife)
-
--- Gloves
 wp_player_gloves (steamid, weapon_team, weapon_defindex)
 ```
 
-**weapon_team värden:**
-- `2` = Terrorists (T)
-- `3` = Counter-Terrorists (CT)
-
-### Konfiguration
-**WeaponPaints.json:** `/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/plugins/WeaponPaints/WeaponPaints.json`
-```json
-{
-  "DatabaseHost": "localhost",
-  "DatabasePort": 3306,
-  "DatabaseUser": "ghost",
-  "DatabasePassword": "GhostServer2024",
-  "DatabaseName": "ghost_gaming"
-}
-```
-
-**core.json:** `FollowCS2ServerGuidelines` måste vara `false`
-
-### Installation (om det behövs igen)
-```bash
-# 1. Ladda ner
-cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins
-wget https://github.com/Nereziel/cs2-WeaponPaints/releases/download/build-399/WeaponPaints.zip
-unzip WeaponPaints.zip
-chown -R cs2:cs2 WeaponPaints
-
-# 2. Kopiera gamedata
-cp plugins/WeaponPaints/gamedata/weaponpaints.json ../gamedata/
-
-# 3. Ändra core.json
-nano ../configs/core.json
-# Sätt FollowCS2ServerGuidelines till false
-
-# 4. Starta server, konfigurera databas, starta om
-```
+**weapon_team värden:** `2` = T, `3` = CT
 
 ### Varning
 Valve tillåter inte officiellt skin-plugins. Risk för GSLT-ban finns.
 
 ---
 
-### FORTSÄTT HÄRIFRÅN (2026-01-11)
-
-**Stora uppdateringar gjorda - Admin panel, Times/Records, Discord integration!**
-
----
-
-### SENASTE UPPDATERING (2026-01-11)
-
-#### Nya Admin-sidor
-- [x] `/admin/settings` - Hantera announcements med färgval
-- [x] `/admin/maps` - Map pool för surf/bhop med suggested maps
-- [x] Dynamiska plugin-inställningar via databas
-
-#### Surf/Bhop Times
-- [x] `/times` - Leaderboard för surf/bhop records
-- [x] API för att spara/hämta times (`/api/times`)
-- [x] SharpTimer setup guide
-
-#### Discord Integration
-- [x] Webhook för rare drops (kniv, handskar, legendary+)
-- [x] `DISCORD_WEBHOOK_URL` i .env
-- [x] Automatisk notifikation vid case opening
-
-#### Server Configs
-- [x] `server-configs/surf-server.cfg` - Komplett surf config
-- [x] `server-configs/bhop-server.cfg` - Komplett bhop config
-- [x] No friendly fire, buy anywhere, unlimited money
-
-#### VPS Deployment
-- [x] `server-configs/VPS-DEPLOYMENT.md` - Guide för att flytta hemsidan till VPS
-- [x] PM2 + Nginx + SSL setup
-- [x] Snabbare API (localhost databas)
-
-#### Nya databas-modeller
-```prisma
-PluginSettings    - Dynamiska plugin-inställningar
-Announcement      - Roterande meddelanden med färg
-MapPool           - Surf/bhop maps
-PlayerTime        - Surf/bhop leaderboards
-```
-
----
-
-### NYA ENVIRONMENT VARIABLES
-```bash
-# Discord (lägg till i .env.local)
-DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
-```
-
----
-
 ### DISCORD
 - **Server:** discord.gg/aSDrPk6Y8q
-- **Webhook:** Sätt DISCORD_WEBHOOK_URL i Vercel/VPS
+- **Webhook:** Sätt DISCORD_WEBHOOK_URL i .env.local
 
 ---
 
-### ATT GÖRA NÄST
-- [ ] Konfigurera WeaponPaints.json med databas-credentials
-- [ ] Installera SharpTimer på VPS
-- [ ] Migrera hemsidan till VPS (valfritt, se VPS-DEPLOYMENT.md)
-- [ ] Testa Discord webhooks
-- [ ] Lägg till fler maps via admin panel
+## ATT GÖRA (2026-01-18)
+- [ ] **Testa skins i spelet** - Anslut och testa !ws, !knife, !wp kommandon
+- [ ] Verifiera att skins appliceras korrekt efter spawn
+
+### KLART (2026-01-18)
+- [x] **WeaponPaints ominstallerad** - Build 399 med alla filer
+- [x] **WeaponPaints konfigurerad** - Komplett config med SkinEnabled: true
+- [x] **GhostSouls fixad** - Använder nu localhost API (http://127.0.0.1:3000)
+- [x] **GhostSouls config fixad** - MinKillIntervalSeconds var float, ändrat till int
+- [x] **Test-skins tillagda** i databasen:
+  - AK-47 Asiimov, M4A4 Howl, AWP Asiimov
+  - Karambit Fade, Deagle Blaze, Glock Fade
+  - USP-S Kill Confirmed (CT)
+- [x] **CounterStrikeSharp uppdaterad** till v356
+- [x] **Gamedata signatur verifierad** - Fungerar enligt cs2-signatures tracker
+- [x] **core.json konfigurerad** - `FollowCS2ServerGuidelines: false`
+
+### Nuvarande Plugin-status (2026-01-18)
+| Plugin | Status | Notering |
+|--------|--------|----------|
+| GhostTimer | OK | Fungerar, visar PB/SR |
+| GhostSouls | OK | Använder localhost API |
+| WeaponPaints | OK | Build 399, laddar korrekt |
+| MenuManagerCore | OK | Dependency för WeaponPaints |
+| PlayerSettings | OK | Dependency för MenuManager |
+
+### Test-skins i databasen (steamid: 76561198295991343)
+| Vapen | Paint ID | Skin |
+|-------|----------|------|
+| Karambit | 38 | Fade |
+| AK-47 | 801 | Asiimov |
+| M4A4 | 309 | Howl |
+| AWP | 344 | Asiimov |
+| Deagle | 37 | Blaze |
+| Glock | 586 | Fade |
+| USP-S | 504 | Kill Confirmed |
+
+### WeaponPaints Config
+```
+Path: /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/plugins/WeaponPaints/WeaponPaints.json
+DatabaseHost: 127.0.0.1
+DatabaseUser: ghost
+DatabaseName: ghost_gaming
+SkinEnabled: true
+KnifeEnabled: true
+GloveEnabled: true
+```
+
+### KLART (2026-01-15)
+- [x] **VPS reinstallerad** - Servern var hackad med rootkit, helt ominstallerad
+- [x] **Säkerhetshärdning** - SSH-nyckel, fail2ban, UFW, auto-updates
+- [x] **MySQL installerad** - ghost_gaming databas skapad
+- [x] **Node.js 20 + PM2** - Webbplats körs på PM2
+- [x] **Nginx + SSL** - Let's Encrypt certifikat för ghostservers.site
+- [x] **Webbplats uppladdad** - https://www.ghostservers.site
+- [x] **CS2-server installeras** - SteamCMD + CS2 dedicated server
+
+### KLART (2026-01-12)
+- [x] GhostTimer flimmer - Fixat (rundar speed till närmaste 10, cachar HUD)
+- [x] GhostTimer stage reset - Fixat (timer resettas BARA vid !r, inte vid zones)
+- [x] GhostTimer laddade inte - Fixat (tog bort !help konflikt med GhostSouls, fixade HttpClient init)
+- [x] GhostSkins skapad - Ny plugin som läser skins från databasen (ersätter WeaponPaints)
+- [x] Alla plugins byggda och redo för upload
 
 ---
 
-### TIDIGARE UPPDATERINGAR
-- [x] Equip/Unequip skins från hemsidan (CT/T/Both)
-- [x] PaintKit-mapping för 200+ CS2 skins
-- [x] Sync skickar nu delta (intjänade souls) istället för att överskriva
-- [x] !souls hämtar nu senaste från sidan först
-- [x] Giveaway system (random + leaderboard)
-- [x] News system
-- [x] WeaponPaints integration för skinchanger
-- [x] Team-baserade skins (CT/T/Both)
-- [x] Kniv-modeller synkas (Karambit, M9, etc)
-- [x] HUD som visar souls (center screen)
+## UPLOAD INSTRUKTIONER (2026-01-13)
+
+GhostTimer är redan uppladdad. Följande plugins behöver laddas upp:
+
+### 1. GhostSouls.dll
+**PowerShell (kopiera till clipboard):**
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\GhostSouls\bin\Release\net8.0\GhostSouls.dll")) | Set-Clipboard
+```
+
+**VPS:**
+```bash
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSouls/
+cat > temp.b64 << 'EOF'
+# KLISTRA IN HÄR (Ctrl+Shift+V), tryck Enter, skriv EOF
+EOF
+base64 -d temp.b64 > GhostSouls.dll && rm temp.b64
+```
+
+### 2. GhostSkins.dll (NY PLUGIN)
+**PowerShell:**
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\GhostSkins\bin\Release\net8.0\GhostSkins.dll")) | Set-Clipboard
+```
+
+**VPS:**
+```bash
+mkdir -p /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSkins/
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSkins/
+cat > temp.b64 << 'EOF'
+# KLISTRA IN HÄR
+EOF
+base64 -d temp.b64 > GhostSkins.dll && rm temp.b64
+```
+
+### 3. MySqlConnector.dll (krävs för GhostSkins)
+**PowerShell:**
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\GhostSkins\bin\Release\net8.0\MySqlConnector.dll")) | Set-Clipboard
+```
+
+**VPS:**
+```bash
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSkins/
+cat > temp.b64 << 'EOF'
+# KLISTRA IN HÄR
+EOF
+base64 -d temp.b64 > MySqlConnector.dll && rm temp.b64
+```
+
+### 4. Fixa permissions och starta om
+```bash
+chown -R cs2:cs2 /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/
+su - cs2
+screen -S surf
+./start-surf.sh
+```
+
+### 5. Verifiera i konsolen
+```
+css_plugins list
+```
+Ska visa: GhostTimer, GhostSouls, GhostSkins
+
+---
+
+## Surf Server Setup (2026-01-11)
+
+### Installerade Plugins (2026-01-18)
+| Plugin | Status | Notering |
+|--------|--------|----------|
+| GhostTimer | OK | v2.1 - speedometer, PB, SR, souls display |
+| GhostSouls | LADDAR | v2.1 - API-fel (401), behöver rätt API-nyckel |
+| WeaponPaints | PROBLEM | Laddar men skins appliceras inte |
+| MenuManagerCore | OK | Dependency för WeaponPaints |
+| PlayerSettings | OK | Dependency för MenuManager |
+
+### Workshop Maps Symlink (VIKTIGT!)
+Maps laddas ner till fel plats. Skapa symlink:
+```bash
+mkdir -p /home/cs2/cs2-server/steamapps/workshop/content
+ln -s /home/cs2/.local/share/Steam/steamapps/workshop/content/730 /home/cs2/cs2-server/steamapps/workshop/content/730
+```
+
+### Steamcmd Path
+```bash
+/home/cs2/.local/share/Steam/steamcmd/steamcmd.sh
+```
+
+### Nedladdade Surf Maps
+```
+3070321829 - surf_beginner
+3073875025 - surf_utopia_njv
+3076153623 - surf_kitsune
+3082548297 - surf_rookie
+3076980482 - surf_mesa_revo
+3088413071 - surf_ace
+3098972556 - surf_benevolent
+```
+
+### Start Script
+```bash
+# /home/cs2/start-surf.sh
+#!/bin/bash
+cd /home/cs2/cs2-server
+export LD_LIBRARY_PATH=/home/cs2/cs2-server/game/bin/linuxsteamrt64/:$LD_LIBRARY_PATH
+./game/bin/linuxsteamrt64/cs2 -dedicated -port 27015 +sv_setsteamaccount E7DB3486189C73BEB6FC896A7DFA1D2F +exec server.cfg +host_workshop_map 3070321829
+```
+
+### Server Config
+- **Path:** /home/cs2/cs2-server/game/csgo/cfg/server.cfg
+- **Timelimit:** 25 minuter per map
+- **Hostname:** Ghost Surf | T1-T3 | ghostservers.site
 
 ---
 
 ## Troubleshooting
 
 ### Server startar inte
-1. Kolla LD_LIBRARY_PATH: `export LD_LIBRARY_PATH=/home/cs2/cs2-server/game/bin/linuxsteamrt64:$LD_LIBRARY_PATH`
-2. Kolla steamclient symlink: `ls -la /home/cs2/.steam/sdk64/`
-
-### Kan inte ansluta
-1. Kolla att servern körs: `screen -r cs2`
-2. Kolla port: `netstat -tulnp | grep 27015`
-3. Kolla firewall: `sudo ufw status`
-4. Se till GSLT är med i startkommandot
-
-### "Bad cert" error
-- Lägg till GSLT i startkommandot: `+sv_setsteamaccount E7DB3486189C73BEB6FC896A7DFA1D2F`
-
----
-
-## Problem vi stötte på och lösningar
-
-### 1. Metamod "undefined symbol" error
-**Problem:** `metamod.2.cs2.so: undefined symbol: UtlMemory_CalcNewAllocationCount`
-**Orsak:** Gammal version av Metamod
-**Lösning:** Ladda ner senaste från https://mms.alliedmods.net/mmsdrop/2.0/
 ```bash
-curl -s https://mms.alliedmods.net/mmsdrop/2.0/ | grep -o 'mmsource-2.0.0-git[0-9]*-linux.tar.gz' | tail -1
-# Ladda ner senaste (t.ex. git1376)
-wget https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1376-linux.tar.gz
+export LD_LIBRARY_PATH=/home/cs2/cs2-server/game/bin/linuxsteamrt64:$LD_LIBRARY_PATH
 ```
 
-### 2. CounterStrikeSharp "File type not supported"
-**Problem:** `Failed to load plugin (File type not supported)`
-**Orsak:** Gammal version av CounterStrikeSharp
-**Lösning:** Ladda ner senaste från GitHub
-```bash
-curl -s https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/latest | grep browser_download_url
-wget https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v1.0.355/counterstrikesharp-with-runtime-linux-1.0.355.zip
-```
+### Plugin laddas inte
+1. Kolla loggar: `cat /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/logs/*.txt`
+2. Kolla ägare: `chown -R cs2:cs2 /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/`
+3. Verifiera: `css_plugins list` i serverkonsolen
 
-### 3. Nästlade addons-mappar efter extraktion
-**Problem:** tar/unzip skapar `addons/addons/metamod` eller `addons/counterstrikesharp`
-**Lösning:** Flytta mappen till rätt plats
-```bash
-mv addons/metamod ~/cs2-server/game/csgo/addons/
-mv addons/counterstrikesharp ~/cs2-server/game/csgo/addons/
-rm -rf addons
-```
-
-### 4. VDF-fil format för CounterStrikeSharp
-**Problem:** `<NOFILE>` i `meta list`
-**Orsak:** Fel VDF-format eller sökväg
-**Lösning:** Skapa rätt VDF i addons-mappen (INTE i metamod-mappen):
-```bash
-cat > ~/cs2-server/game/csgo/addons/counterstrikesharp.vdf << 'EOF'
-"Plugin"
-{
-    "file"  "addons/counterstrikesharp/bin/linuxsteamrt64/counterstrikesharp"
-}
-EOF
-```
-**VIKTIGT:** Använd `"Plugin"` INTE `"Metamod Plugin"`, och relativ sökväg!
-
-### 5. Plugin hamnade i /root istället för /home/cs2
-**Problem:** Körde kommandon som root, så filer skapades i /root/cs2-server/
-**Orsak:** CS2-servern körs under `cs2`-användaren, inte root
-**Lösning:** Kopiera filer till rätt plats och ändra ägare
-```bash
-cp /root/.../GhostSouls.dll /home/cs2/.../GhostSouls.dll
-chown -R cs2:cs2 /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/
-```
-**VIKTIGT:** Kör alltid plugin-kommandon som `cs2`-användaren: `su - cs2`
-
-### 6. libtier0.so not found
-**Problem:** CounterStrikeSharp kan inte ladda pga saknad library
-**Lösning:** Använd start-scriptet som sätter LD_LIBRARY_PATH:
-```bash
-# ~/start-cs2.sh
-#!/bin/bash
-cd /home/cs2/cs2-server
-export LD_LIBRARY_PATH=/home/cs2/cs2-server/game/bin/linuxsteamrt64/:$LD_LIBRARY_PATH
-./game/bin/linuxsteamrt64/cs2 -dedicated -port 27015 +sv_setsteamaccount E7DB3486189C73BEB6FC896A7DFA1D2F +map de_dust2 +host_workshop_map 3070321829
-```
-
-### Generella tips för plugin-installation
-1. **Alltid kör som cs2-användaren:** `su - cs2`
-2. **Extrahera till game/csgo/**, INTE game/csgo/addons/ (arkiven har addons-mapp inuti)
-3. **Kolla loggar:** `cat ~/cs2-server/game/csgo/addons/counterstrikesharp/logs/*.txt`
-4. **Kolla att filer finns:** `ls -la ~/cs2-server/game/csgo/addons/counterstrikesharp/plugins/PluginName/`
-5. **Kolla ägare:** Ska vara `cs2:cs2`, fixa med `chown -R cs2:cs2 ...`
-
-### VIKTIGT: Användarkontext och sökvägar
-- **root** har hemkatalog `/root/` - `~` expanderar till `/root/`
-- **cs2** har hemkatalog `/home/cs2/` - `~` expanderar till `/home/cs2/`
-- CS2-servern och alla plugins ligger i `/home/cs2/cs2-server/`
-- **ANVÄND ALLTID ABSOLUTA SÖKVÄGAR** när du kopierar filer: `/home/cs2/cs2-server/...`
-- Om du är root och vill jobba med serverfiler, använd `/home/cs2/...` INTE `~/...`
-- För att kopiera plugin-filer som root:
-  ```bash
-  cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSouls
-  # Arbeta här med filer
-  chown cs2:cs2 GhostSouls.dll  # Glöm inte ändra ägare!
-  ```
-
----
-
-## Useful Files
-
-- **vps-commands.txt** - Kommandon för VPS setup
-- **server-config.txt** - Server.cfg innehåll
-- **fix-steamclient.txt** - Steamclient fix kommando
+### VIKTIGT: Alltid använd absoluta sökvägar
+- CS2 körs som `cs2`-användaren, inte root
+- Plugins ligger i `/home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/`
+- Använd ALDRIG `~/` som root - det pekar på `/root/`, inte `/home/cs2/`

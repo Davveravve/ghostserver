@@ -1,68 +1,63 @@
 {
-  "ApiUrl": "https://ghostservers.site",
-  "ApiKey": "your-secure-api-key-here",
-  "WebsiteUrl": "https://ghostservers.site",
-  "ServerName": "Ghost Gaming | Retake #1",
+  "ConfigVersion": 1,
+  "ApiUrl": "https://www.ghostservers.site",
+  "ApiKey": "3NULQW7WPpW3ZquX2WzFVyvWx2y09DQEg+JBA4+JVv4=",
+  "WebsiteUrl": "https://www.ghostservers.site",
+  "ServerName": "Ghost Surf",
   "Souls": {
-    "KillReward": 5,
-    "HeadshotBonus": 2,
-    "KnifeKillBonus": 10,
-    "AssistReward": 2,
-    "MVPBonus": 5,
-    "RoundWinBonus": 3,
-    "MinKillIntervalSeconds": 5
+    "KillReward": 1,
+    "HeadshotBonus": 1,
+    "KnifeKillBonus": 3,
+    "ClutchBonus": 5,
+    "DefuseBonus": 2,
+    "PlantBonus": 1,
+    "MVPBonus": 2,
+    "RoundWinBonus": 1,
+    "MinKillIntervalSeconds": 3,
+    "SoulsPerMinute": 3
   },
   "Sponsors": {
-    "Enabled": true,
+    "Enabled": false,
     "IntervalSeconds": 120,
-    "Ads": [
-      {
-        "Type": "chat",
-        "Message": "Open cases at ghostservers.site and win rare skins!",
-        "Sponsor": "Ghost Servers",
-        "Url": "https://ghostservers.site/cases"
-      },
-      {
-        "Type": "chat",
-        "Message": "Check your inventory: !inventory | Your souls: !souls",
-        "Sponsor": "Ghost Servers",
-        "Url": ""
-      },
-      {
-        "Type": "center",
-        "Message": "ghostservers.site - Open Cases, Win Skins!",
-        "Sponsor": "Ghost Servers",
-        "Url": ""
-      }
-    ]
+    "Ads": []
   },
   "Servers": {
     "Servers": [
       {
         "Name": "Surf",
-        "Address": "surf.ghostservers.site:27015",
-        "Description": "Surf maps with timer"
-      },
-      {
-        "Name": "Bhop",
-        "Address": "bhop.ghostservers.site:27015",
-        "Description": "Bunny hop maps"
-      },
-      {
-        "Name": "Retake #1",
-        "Address": "retake1.ghostservers.site:27015",
-        "Description": "5v5 Retake"
-      },
-      {
-        "Name": "Retake #2",
-        "Address": "retake2.ghostservers.site:27015",
-        "Description": "5v5 Retake"
-      },
-      {
-        "Name": "Competitive",
-        "Address": "comp.ghostservers.site:27015",
-        "Description": "5v5 Competitive"
+        "Address": "46.224.197.229:27015",
+        "Description": "Surf T1-T3"
       }
+    ]
+  },
+  "Roles": {
+    "Owners": ["76561198295991343"],
+    "Admins": [],
+    "Mods": [],
+    "RoleSettings": {
+      "owner": { "Tag": "[OWNER]", "ChatColor": "Red", "TagColor": "DarkRed", "SoulsMultiplier": 5.0 },
+      "admin": { "Tag": "[ADMIN]", "ChatColor": "Orange", "TagColor": "Orange", "SoulsMultiplier": 3.0 },
+      "mod": { "Tag": "[MOD]", "ChatColor": "LightGreen", "TagColor": "Green", "SoulsMultiplier": 2.0 },
+      "ascended": { "Tag": "[ASCENDED]", "ChatColor": "Grey", "TagColor": "Black", "SoulsMultiplier": 2.0 },
+      "default": { "Tag": "", "ChatColor": "Default", "TagColor": "Default", "SoulsMultiplier": 1.0 }
+    }
+  },
+  "Ranking": {
+    "Enabled": true,
+    "StartingElo": 1000,
+    "WinElo": 25,
+    "LossElo": 20,
+    "KillElo": 2,
+    "DeathElo": 1,
+    "Ranks": [
+      { "Name": "Haunted", "MinElo": 0, "Color": "Grey", "Icon": "I" },
+      { "Name": "Spirit", "MinElo": 800, "Color": "LightBlue", "Icon": "II" },
+      { "Name": "Phantom", "MinElo": 1000, "Color": "Blue", "Icon": "III" },
+      { "Name": "Specter", "MinElo": 1200, "Color": "Purple", "Icon": "IV" },
+      { "Name": "Wraith", "MinElo": 1400, "Color": "Magenta", "Icon": "V" },
+      { "Name": "Shade", "MinElo": 1600, "Color": "Orange", "Icon": "VI" },
+      { "Name": "Ghost", "MinElo": 1800, "Color": "Gold", "Icon": "VII" },
+      { "Name": "Ascended", "MinElo": 2000, "Color": "Red", "Icon": "VIII" }
     ]
   }
 }

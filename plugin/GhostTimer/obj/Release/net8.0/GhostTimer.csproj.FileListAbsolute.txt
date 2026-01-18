@@ -1,0 +1,13 @@
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\bin\Release\net8.0\GhostTimer.deps.json
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\bin\Release\net8.0\GhostTimer.dll
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\bin\Release\net8.0\GhostTimer.pdb
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.csproj.AssemblyReference.cache
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.AssemblyInfoInputs.cache
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.AssemblyInfo.cs
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.csproj.CoreCompileInputs.cache
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.sourcelink.json
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.dll
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\refint\GhostTimer.dll
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\GhostTimer.pdb
+C:\Users\david\Desktop\ghost\plugin\GhostTimer\obj\Release\net8.0\ref\GhostTimer.dll

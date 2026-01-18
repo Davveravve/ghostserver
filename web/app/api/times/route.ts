@@ -51,18 +51,25 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Record a new time (from SharpTimer plugin)
+// POST - Record a new time (from GhostTimer plugin)
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = request.headers.get('X-API-Key')
+    const apiKey = request.headers.get('X-API-Key') || request.headers.get('x-api-key')
     if (apiKey !== process.env.PLUGIN_API_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { steamId, mapName, style, time, checkpoints } = body
+    // Accept both "mapName" (old) and "map" (GhostTimer) formats
+    const steamId = body.steamId
+    const mapName = body.mapName || body.map
+    const style = body.style || body.gameMode || 'normal'
+    const time = body.time
+    const checkpoints = body.checkpoints || 0
+    const playerName = body.playerName || ''
 
     if (!steamId || !mapName || time === undefined) {
+      console.error('Missing fields:', { steamId, mapName, time, body })
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 

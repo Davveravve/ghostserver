@@ -1,0 +1,19 @@
+# Ghost Gaming - Surf Map Pool
+# Format: workshop_id // map_name (tier)
+# 10 maps, Tier 1-3 (beginner to intermediate)
+
+# TIER 1 - Beginner
+3070321829  // surf_utopia (T1)
+3074960786  // surf_beginner (T1)
+3082580014  // surf_kitsune (T1)
+3100631518  // surf_rookie (T1)
+
+# TIER 2 - Easy
+3075284675  // surf_mesa (T2)
+3085162412  // surf_summit (T2)
+3089545071  // surf_ace (T2)
+
+# TIER 3 - Intermediate
+3076958322  // surf_forbidden_ways (T3)
+3081493339  // surf_calycate (T3)
+3104517802  // surf_rebel_resistance (T3)

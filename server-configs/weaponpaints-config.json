@@ -1,0 +1,54 @@
+{
+  "// DATABASE": "------------------------",
+  "DatabaseType": "MySQL",
+  "DatabaseHost": "localhost",
+  "DatabasePort": 3306,
+  "DatabaseUser": "ghost",
+  "DatabasePassword": "GhostServer2024",
+  "DatabaseName": "ghost_gaming",
+  "TablePrefix": "wp_",
+
+  "// GENERAL": "------------------------",
+  "Enabled": true,
+  "ChatPrefix": "[Ghost]",
+  "ShowSkinsOnDeath": true,
+  "ShowSkinsOnPickup": true,
+
+  "// COMMANDS": "------------------------",
+  "CommandSkins": "!ws",
+  "CommandKnife": "!knife",
+  "CommandGloves": "!gloves",
+  "CommandRefresh": "!refreshskins",
+
+  "// SYNC": "------------------------",
+  "SyncOnConnect": true,
+  "SyncOnSpawn": true,
+  "SyncInterval": 0,
+
+  "// KNIVES": "------------------------",
+  "KnivesEnabled": true,
+  "DefaultKnife": "",
+  "AllowCustomKnife": true,
+
+  "// GLOVES": "------------------------",
+  "GlovesEnabled": true,
+  "DefaultGloves": "",
+  "AllowCustomGloves": true,
+
+  "// SKINS": "------------------------",
+  "SkinsEnabled": true,
+  "WearEnabled": true,
+  "SeedEnabled": true,
+  "StatTrakEnabled": true,
+  "NametagEnabled": true,
+
+  "// MENU": "------------------------",
+  "MenuEnabled": false,
+  "MenuTitle": "Ghost Skins",
+  "MenuCloseOnSelect": true,
+
+  "// MESSAGES": "------------------------",
+  "SkinChangedMessage": "",
+  "KnifeChangedMessage": "",
+  "GlovesChangedMessage": ""
+}

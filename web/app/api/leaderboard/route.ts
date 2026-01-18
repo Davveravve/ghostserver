@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
-import { isAnnouncementItem } from '@/lib/item-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,58 +49,18 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Fetch top 10 players by cases opened
-    const topCasesOpened = await prisma.player.findMany({
-      orderBy: { casesOpened: 'desc' },
+    // Fetch top 10 players by playtime
+    const topPlaytime = await prisma.player.findMany({
+      orderBy: { playtimeMinutes: 'desc' },
       take: 10,
       select: {
         id: true,
         steamId: true,
         username: true,
         avatarUrl: true,
-        casesOpened: true,
+        playtimeMinutes: true,
       },
     })
-
-    // Fetch players with most rare items (announcement-worthy items)
-    // We need to count rare items per player
-    const playersWithRareItems = await prisma.player.findMany({
-      include: {
-        inventory: {
-          select: {
-            weapon: true,
-            skinName: true,
-            dopplerPhase: true,
-            rarity: true,
-          },
-        },
-      },
-    })
-
-    // Calculate rare items count and best drop for each player
-    const rareItemsData = playersWithRareItems
-      .map((player) => {
-        const rareItems = player.inventory.filter((item) =>
-          isAnnouncementItem(item.weapon, item.skinName, item.dopplerPhase)
-        )
-
-        // Find best item (legendary/ultra rarity, or any announcement item)
-        const bestItem = rareItems[0] // Just take first rare item as "best" for now
-
-        return {
-          id: player.id,
-          steamId: player.steamId,
-          username: player.username,
-          avatarUrl: player.avatarUrl,
-          rareCount: rareItems.length,
-          bestDrop: bestItem
-            ? `${bestItem.weapon} | ${bestItem.skinName}`
-            : null,
-        }
-      })
-      .filter((p) => p.rareCount > 0)
-      .sort((a, b) => b.rareCount - a.rareCount)
-      .slice(0, 5)
 
     // Get current user's stats and rankings if logged in
     let currentUserStats = null
@@ -115,14 +74,9 @@ export async function GET(request: NextRequest) {
           avatarUrl: true,
           totalSoulsEarned: true,
           playtimeMinutes: true,
-          casesOpened: true,
-          inventory: {
-            select: {
-              weapon: true,
-              skinName: true,
-              dopplerPhase: true,
-            },
-          },
+          elo: true,
+          wins: true,
+          losses: true,
         },
       })
 
@@ -132,25 +86,21 @@ export async function GET(request: NextRequest) {
           where: { totalSoulsEarned: { gt: currentUser.totalSoulsEarned } },
         })
 
-        // Calculate user's rank in cases opened leaderboard
-        const casesRank = await prisma.player.count({
-          where: { casesOpened: { gt: currentUser.casesOpened } },
+        // Calculate user's rank in ELO leaderboard
+        const eloRank = await prisma.player.count({
+          where: { elo: { gt: currentUser.elo } },
         })
-
-        // Count user's rare items
-        const userRareItems = currentUser.inventory.filter((item) =>
-          isAnnouncementItem(item.weapon, item.skinName, item.dopplerPhase)
-        )
 
         currentUserStats = {
           username: currentUser.username,
           avatarUrl: currentUser.avatarUrl,
           totalSoulsEarned: currentUser.totalSoulsEarned,
           playtimeMinutes: currentUser.playtimeMinutes,
-          casesOpened: currentUser.casesOpened,
-          rareItems: userRareItems.length,
+          elo: currentUser.elo,
+          wins: currentUser.wins,
+          losses: currentUser.losses,
           soulsRank: soulsRank + 1,
-          casesRank: casesRank + 1,
+          eloRank: eloRank + 1,
         }
       }
     }
@@ -171,18 +121,11 @@ export async function GET(request: NextRequest) {
         wins: p.wins,
         losses: p.losses,
       })),
-      topCasesOpened: topCasesOpened.map((p, i) => ({
+      topPlaytime: topPlaytime.map((p, i) => ({
         rank: i + 1,
         username: p.username,
         avatarUrl: p.avatarUrl,
-        casesOpened: p.casesOpened,
-      })),
-      topRareItems: rareItemsData.map((p, i) => ({
-        rank: i + 1,
-        username: p.username,
-        avatarUrl: p.avatarUrl,
-        rareCount: p.rareCount,
-        bestDrop: p.bestDrop,
+        playtime: p.playtimeMinutes,
       })),
       currentUser: currentUserStats,
     })

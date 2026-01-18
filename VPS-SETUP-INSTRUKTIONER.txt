@@ -1,0 +1,167 @@
+===============================================================================
+                    GHOST SERVERS - VPS SETUP INSTRUKTIONER
+                              2026-01-14
+===============================================================================
+
+VPS: 46.224.197.229 (Hetzner CPX22)
+User: root (eller cs2 for serverkommandon)
+
+===============================================================================
+STEG 1: LADDA UPP GHOSTSOULS.DLL
+===============================================================================
+
+WINDOWS (PowerShell):
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\GhostSouls\bin\Release\net8.0\GhostSouls.dll")) | Set-Clipboard
+
+VPS (SSH som root):
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSouls/
+cat > temp.b64 << 'EOF'
+[KLISTRA IN HÄR - Ctrl+Shift+V]
+EOF
+base64 -d temp.b64 > GhostSouls.dll && rm temp.b64
+
+
+===============================================================================
+STEG 2: LADDA UPP GHOSTTIMER.DLL
+===============================================================================
+
+WINDOWS (PowerShell):
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\GhostTimer\bin\Release\net8.0\GhostTimer.dll")) | Set-Clipboard
+
+VPS (SSH som root):
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostTimer/
+cat > temp.b64 << 'EOF'
+[KLISTRA IN HÄR - Ctrl+Shift+V]
+EOF
+base64 -d temp.b64 > GhostTimer.dll && rm temp.b64
+
+
+===============================================================================
+STEG 3: LADDA UPP GHOSTSKINS.DLL
+===============================================================================
+
+WINDOWS (PowerShell):
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\GhostSkins\bin\Release\net8.0\GhostSkins.dll")) | Set-Clipboard
+
+VPS (SSH som root):
+mkdir -p /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSkins/
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSkins/
+cat > temp.b64 << 'EOF'
+[KLISTRA IN HÄR - Ctrl+Shift+V]
+EOF
+base64 -d temp.b64 > GhostSkins.dll && rm temp.b64
+
+
+===============================================================================
+STEG 4: LADDA UPP MYSQLCONNECTOR.DLL (KRÄVS FÖR GHOSTSKINS)
+===============================================================================
+
+WINDOWS (PowerShell):
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\david\Desktop\ghost\plugin\GhostSkins\bin\Release\net8.0\MySqlConnector.dll")) | Set-Clipboard
+
+VPS (SSH som root):
+cd /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/GhostSkins/
+cat > temp.b64 << 'EOF'
+[KLISTRA IN HÄR - Ctrl+Shift+V]
+EOF
+base64 -d temp.b64 > MySqlConnector.dll && rm temp.b64
+
+
+===============================================================================
+STEG 5: FIXA PERMISSIONS
+===============================================================================
+
+VPS (SSH som root):
+chown -R cs2:cs2 /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/
+
+
+===============================================================================
+STEG 6: SKAPA GHOSTSKINS CONFIG
+===============================================================================
+
+VPS (SSH som root):
+mkdir -p /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/plugins/GhostSkins/
+
+cat > /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/plugins/GhostSkins/GhostSkins.json << 'EOF'
+{
+  "Database": {
+    "Host": "localhost",
+    "Port": 3306,
+    "Name": "ghost_gaming",
+    "User": "ghost",
+    "Password": "GhostServer2024"
+  },
+  "WebsiteUrl": "https://ghostservers.site",
+  "ConfigVersion": 1
+}
+EOF
+
+chown -R cs2:cs2 /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/
+
+
+===============================================================================
+STEG 7: STARTA OM CS2-SERVERN
+===============================================================================
+
+VPS (SSH som root):
+pkill -f cs2
+su - cs2
+screen -S surf
+./start-surf.sh
+
+
+===============================================================================
+STEG 8: VERIFIERA I SERVERKONSOLEN
+===============================================================================
+
+I CS2-konsolen (inne i screen), skriv:
+css_plugins list
+
+Ska visa:
+- GhostSouls
+- GhostTimer
+- GhostSkins
+
+
+===============================================================================
+VIKTIGA SÖKVÄGAR PÅ VPS
+===============================================================================
+
+CS2 Server:          /home/cs2/cs2-server/
+Plugins:             /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/
+Plugin Configs:      /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/configs/plugins/
+Server Config:       /home/cs2/cs2-server/game/csgo/cfg/server.cfg
+CSS Logs:            /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/logs/
+Website:             /var/www/ghost eller /home/cs2/ghost/web
+
+
+===============================================================================
+SCREEN-KOMMANDON
+===============================================================================
+
+Visa aktiva screens:   screen -ls
+Anslut till screen:    screen -r surf
+Lämna screen (kör):    Ctrl+A sen D
+Döda screen:           screen -X -S surf quit
+
+
+===============================================================================
+FELSÖKNING
+===============================================================================
+
+Plugin laddas inte:
+1. Kolla loggar: cat /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/logs/*.txt
+2. Kolla permissions: ls -la /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/plugins/
+3. Fixa ägare: chown -R cs2:cs2 /home/cs2/cs2-server/game/csgo/addons/counterstrikesharp/
+
+SSH fungerar inte:
+1. Testa: ssh -v root@46.224.197.229
+2. Använd Hetzner Console: https://console.hetzner.cloud/
+3. Power cycle servern om den hänger
+
+Servern startar inte:
+1. Kör: export LD_LIBRARY_PATH=/home/cs2/cs2-server/game/bin/linuxsteamrt64:$LD_LIBRARY_PATH
+2. Sen: ./start-surf.sh
+
+
+===============================================================================

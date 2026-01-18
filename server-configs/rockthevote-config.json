@@ -1,0 +1,67 @@
+{
+  "Version": 1,
+
+  "// GENERAL SETTINGS": "------------------------",
+  "Enabled": true,
+  "ChatPrefix": "[Ghost]",
+  "EnabledInWarmup": false,
+
+  "// RTV SETTINGS": "------------------------",
+  "RtvEnabled": true,
+  "RtvMinPlayers": 1,
+  "RtvPercentage": 51,
+  "RtvCooldownMinutes": 3,
+  "RtvDelayMinutes": 2,
+
+  "// MAP VOTING": "------------------------",
+  "VoteEnabled": true,
+  "VotePercentage": 51,
+  "VoteDurationSeconds": 30,
+  "VoteMapsCount": 5,
+  "VoteEndOfMapEnabled": true,
+
+  "// TIME LIMIT": "------------------------",
+  "TimeLimitEnabled": true,
+  "TimeLimitMinutes": 25,
+  "TimeLimitWarningMinutes": 5,
+  "TimeLimitVoteEnabled": true,
+
+  "// MAP CHANGE": "------------------------",
+  "ChangeMapImmediately": false,
+  "ChangeMapDelaySeconds": 10,
+  "ChangeMapAfterVote": true,
+
+  "// NOMINATION": "------------------------",
+  "NominationEnabled": true,
+  "MaxNominationsPerPlayer": 1,
+  "NominationMinPlayers": 1,
+
+  "// EXTEND MAP": "------------------------",
+  "ExtendMapEnabled": true,
+  "ExtendMapMinutes": 10,
+  "ExtendMapMaxCount": 2,
+  "ExtendMapPercentage": 51,
+
+  "// WORKSHOP": "------------------------",
+  "WorkshopMapsEnabled": true,
+  "WorkshopCollectionId": "",
+
+  "// RANDOM MAP CYCLE": "------------------------",
+  "RandomMapCycle": true,
+  "ExcludeCurrentMap": true,
+  "ExcludeLastMapsCount": 3,
+
+  "// MESSAGES": "------------------------",
+  "VoteStartedMessage": "Map vote has started! Type !vote",
+  "VoteEndedMessage": "Voting complete! Next map: {map}",
+  "RtvSuccessMessage": "RTV successful! Starting vote...",
+  "RtvFailedMessage": "Need {needed} more votes for RTV ({current}/{total})",
+  "NominatedMessage": "{player} nominated {map}",
+  "TimeleftMessage": "Time remaining: {time}",
+  "NextmapMessage": "Next map: {map}",
+
+  "// ADMIN": "------------------------",
+  "AdminForceMapEnabled": true,
+  "AdminForceVoteEnabled": true,
+  "AdminExtendEnabled": true
+}

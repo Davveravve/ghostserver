@@ -1,0 +1,11 @@
+{
+  "ConfigVersion": 1,
+  "Database": {
+    "Host": "localhost",
+    "Port": 3306,
+    "Name": "ghost_gaming",
+    "User": "ghost",
+    "Password": "GhostServer2024"
+  },
+  "WebsiteUrl": "https://ghostservers.site"
+}
