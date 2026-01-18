@@ -7,6 +7,7 @@ interface TimeRecord {
   rank: number
   steamId: string
   playerName?: string
+  avatarUrl?: string
   time: number
   formattedTime: string
   checkpoints: number
@@ -15,7 +16,7 @@ interface TimeRecord {
 
 interface MapData {
   map: string
-  wr: { steamId: string; playerName?: string; time: number } | null
+  wr: { steamId: string; playerName?: string; avatarUrl?: string; time: number } | null
   leaderboard: TimeRecord[]
 }
 
@@ -170,14 +171,23 @@ export default function TimesPage() {
                   </p>
                 </div>
                 {mapData?.wr && (
-                  <div className="text-right bg-gradient-to-br from-amber-500/20 to-yellow-500/10 px-5 py-3 rounded-xl border border-amber-500/20">
-                    <div className="text-xs text-amber-400/80 uppercase tracking-wider font-medium">Server Record</div>
-                    <div className="text-2xl font-bold text-amber-400 font-mono">
-                      {formatTime(mapData.wr.time)}
-                    </div>
-                    {mapData.wr.playerName && (
-                      <div className="text-xs text-gray-400 mt-0.5">by {mapData.wr.playerName}</div>
+                  <div className="flex items-center gap-3 bg-gradient-to-br from-amber-500/20 to-yellow-500/10 px-5 py-3 rounded-xl border border-amber-500/20">
+                    {mapData.wr.avatarUrl && (
+                      <img
+                        src={mapData.wr.avatarUrl}
+                        alt={mapData.wr.playerName || 'WR Holder'}
+                        className="w-12 h-12 rounded-full border-2 border-amber-500/50"
+                      />
                     )}
+                    <div className="text-right">
+                      <div className="text-xs text-amber-400/80 uppercase tracking-wider font-medium">Server Record</div>
+                      <div className="text-2xl font-bold text-amber-400 font-mono">
+                        {formatTime(mapData.wr.time)}
+                      </div>
+                      {mapData.wr.playerName && (
+                        <div className="text-xs text-gray-400 mt-0.5">by {mapData.wr.playerName}</div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -225,9 +235,20 @@ export default function TimesPage() {
                               href={`https://steamcommunity.com/profiles/${record.steamId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="hover:text-purple-400 transition-colors font-medium"
+                              className="flex items-center gap-3 hover:text-purple-400 transition-colors"
                             >
-                              {record.playerName || record.steamId}
+                              {record.avatarUrl ? (
+                                <img
+                                  src={record.avatarUrl}
+                                  alt={record.playerName || 'Player'}
+                                  className="w-8 h-8 rounded-full"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-ghost-elevated flex items-center justify-center">
+                                  <span className="text-xs text-gray-500">?</span>
+                                </div>
+                              )}
+                              <span className="font-medium">{record.playerName || `Player_${record.steamId.slice(-6)}`}</span>
                             </a>
                           </td>
                           <td className="py-4 text-right font-mono text-white">

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ records: worldRecords })
     }
 
-    // Get leaderboard for specific map
+    // Get leaderboard for specific map with player info
     const times = await prisma.playerTime.findMany({
       where: {
         mapName,
@@ -29,21 +29,41 @@ export async function GET(request: NextRequest) {
       take: limit
     })
 
-    // Get WR
-    const wr = times[0] || null
+    // Get player info for all times
+    const steamIds = times.map(t => t.steamId)
+    const players = await prisma.player.findMany({
+      where: { steamId: { in: steamIds } },
+      select: { steamId: true, username: true, avatarUrl: true }
+    })
+    const playerMap = new Map(players.map(p => [p.steamId, p]))
+
+    // Get WR with player info
+    const wrTime = times[0]
+    const wrPlayer = wrTime ? playerMap.get(wrTime.steamId) : null
+    const wr = wrTime ? {
+      steamId: wrTime.steamId,
+      playerName: wrPlayer?.username || null,
+      avatarUrl: wrPlayer?.avatarUrl || null,
+      time: wrTime.time
+    } : null
 
     return NextResponse.json({
       map: mapName,
       style,
       wr,
-      leaderboard: times.map((t, i) => ({
-        rank: i + 1,
-        steamId: t.steamId,
-        time: t.time,
-        formattedTime: formatTime(t.time),
-        checkpoints: t.checkpoints,
-        date: t.createdAt
-      }))
+      leaderboard: times.map((t, i) => {
+        const player = playerMap.get(t.steamId)
+        return {
+          rank: i + 1,
+          steamId: t.steamId,
+          playerName: player?.username || null,
+          avatarUrl: player?.avatarUrl || null,
+          time: t.time,
+          formattedTime: formatTime(t.time),
+          checkpoints: t.checkpoints,
+          date: t.createdAt
+        }
+      })
     })
   } catch (error) {
     console.error('Times fetch error:', error)
